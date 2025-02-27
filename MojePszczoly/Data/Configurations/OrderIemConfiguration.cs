@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore;
-using MojePszczoly.Models;
+using MojePszczoly.Data.Models;
 
 namespace MojePszczoly.Data.Configurations
 {
@@ -10,6 +10,10 @@ namespace MojePszczoly.Data.Configurations
         {
             builder.HasKey(oi => oi.OrderItemId);
 
+
+            builder.Property(oi => oi.OrderItemId)
+                   .ValueGeneratedOnAdd();
+
             builder.Property(oi => oi.Quantity)
                    .IsRequired();
 
@@ -18,10 +22,10 @@ namespace MojePszczoly.Data.Configurations
                    .HasForeignKey(oi => oi.BreadId)
                    .OnDelete(DeleteBehavior.Restrict);
 
-            builder.HasOne<Order>()
-                 .WithMany(o => o.Items)
-                 .HasForeignKey(oi => oi.OrderItemId)
-                 .OnDelete(DeleteBehavior.Cascade);
+            builder.HasOne(oi => oi.Order)
+                   .WithMany(o => o.Items)
+                   .HasForeignKey(oi => oi.OrderId) 
+                   .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

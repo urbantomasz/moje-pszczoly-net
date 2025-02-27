@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MojePszczoly.Data;
+using MojePszczoly.Data.Models;
 using MojePszczoly.Models;
 
 namespace MojePszczoly.Controllers
@@ -17,15 +18,29 @@ namespace MojePszczoly.Controllers
         }
 
         [HttpPost]
-        public IActionResult CreateOrder([FromBody] Order order)
+        public IActionResult CreateOrder([FromBody] CreateOrderDto orderDto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+                return BadRequest(ModelState); 
+ 
+
+            var order = new Order
+            {
+                CustomerName = orderDto.CustomerName,
+                Phone = orderDto.Phone,
+                OrderDate = orderDto.OrderDate,
+                Note = orderDto.Note,
+                Items = orderDto.Items.Select(itemDto => new OrderItem
+                {
+                    BreadId = itemDto.BreadId,
+                    Quantity = itemDto.Quantity
+                }).ToList()
+            };
 
             _context.Orders.Add(order);
             _context.SaveChanges();
 
-            return Ok();
+            return Ok(new { message = "Order created successfully!" });
         }
 
         [HttpGet]
@@ -36,8 +51,25 @@ namespace MojePszczoly.Controllers
                 .ThenInclude(i => i.Bread)
                 .ToListAsync();
 
-            return Ok(orders);
+            var orderDtos = orders.Select(o => new OrderDto
+            {
+                OrderId = o.OrderId,
+                CustomerName = o.CustomerName,
+                Note = o.Note,
+                Phone = o.Phone,
+                OrderDate = o.OrderDate,
+                Items = o.Items.Select(i => new OrderItemDto
+                {
+                    OrderItemId = i.OrderItemId,
+                    BreadId = i.BreadId,
+                    BreadName = i.Bread.ShortName,
+                    Quantity = i.Quantity
+                }).ToList()
+            }).ToList();
+
+            return Ok(orderDtos);
         }
+
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteOrder(int id)

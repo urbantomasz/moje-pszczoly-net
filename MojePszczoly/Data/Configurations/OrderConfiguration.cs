@@ -1,6 +1,6 @@
-﻿using MojePszczoly.Models;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using MojePszczoly.Data.Models;
 
 namespace MojePszczoly.Data.Configurations
 {
@@ -32,7 +32,7 @@ namespace MojePszczoly.Data.Configurations
 
             builder.HasMany(o => o.Items)
                    .WithOne()
-                   .HasForeignKey(oi => oi.OrderItemId)
+                   .HasForeignKey(oi => oi.OrderId)
                    .OnDelete(DeleteBehavior.Cascade);
         }
     }

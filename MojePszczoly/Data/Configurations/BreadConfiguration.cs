@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using MojePszczoly.Models;
+using MojePszczoly.Data.Models;
 
 namespace MojePszczoly.Data.Configurations
 {

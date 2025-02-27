@@ -35,6 +35,7 @@ namespace MojePszczoly.Migrations
                     CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     CustomerName = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    Note = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
                     Phone = table.Column<int>(type: "INTEGER", maxLength: 9, nullable: false),
                     OrderDate = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
@@ -47,7 +48,9 @@ namespace MojePszczoly.Migrations
                 name: "OrderItems",
                 columns: table => new
                 {
-                    OrderItemId = table.Column<int>(type: "INTEGER", nullable: false),
+                    OrderItemId = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    OrderId = table.Column<int>(type: "INTEGER", nullable: false),
                     BreadId = table.Column<int>(type: "INTEGER", nullable: false),
                     Quantity = table.Column<int>(type: "INTEGER", nullable: false)
                 },
@@ -61,8 +64,8 @@ namespace MojePszczoly.Migrations
                         principalColumn: "BreadId",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_OrderItems_Orders_OrderItemId",
-                        column: x => x.OrderItemId,
+                        name: "FK_OrderItems_Orders_OrderId",
+                        column: x => x.OrderId,
                         principalTable: "Orders",
                         principalColumn: "OrderId",
                         onDelete: ReferentialAction.Cascade);
@@ -72,6 +75,11 @@ namespace MojePszczoly.Migrations
                 name: "IX_OrderItems_BreadId",
                 table: "OrderItems",
                 column: "BreadId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderItems_OrderId",
+                table: "OrderItems",
+                column: "OrderId");
         }
 
         /// <inheritdoc />

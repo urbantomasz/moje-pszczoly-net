@@ -11,8 +11,8 @@ using MojePszczoly.Data;
 namespace MojePszczoly.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250225182543_AddOrderNote")]
-    partial class AddOrderNote
+    [Migration("20250227202421_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -20,7 +20,7 @@ namespace MojePszczoly.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.13");
 
-            modelBuilder.Entity("MojePszczoly.Models.Bread", b =>
+            modelBuilder.Entity("MojePszczoly.Data.Models.Bread", b =>
                 {
                     b.Property<int>("BreadId")
                         .ValueGeneratedOnAdd()
@@ -46,7 +46,7 @@ namespace MojePszczoly.Migrations
                     b.ToTable("Breads");
                 });
 
-            modelBuilder.Entity("MojePszczoly.Models.Order", b =>
+            modelBuilder.Entity("MojePszczoly.Data.Models.Order", b =>
                 {
                     b.Property<int>("OrderId")
                         .ValueGeneratedOnAdd()
@@ -83,12 +83,16 @@ namespace MojePszczoly.Migrations
                     b.ToTable("Orders");
                 });
 
-            modelBuilder.Entity("MojePszczoly.Models.OrderItem", b =>
+            modelBuilder.Entity("MojePszczoly.Data.Models.OrderItem", b =>
                 {
                     b.Property<int>("OrderItemId")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("BreadId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("OrderId")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("Quantity")
@@ -98,27 +102,31 @@ namespace MojePszczoly.Migrations
 
                     b.HasIndex("BreadId");
 
+                    b.HasIndex("OrderId");
+
                     b.ToTable("OrderItems");
                 });
 
-            modelBuilder.Entity("MojePszczoly.Models.OrderItem", b =>
+            modelBuilder.Entity("MojePszczoly.Data.Models.OrderItem", b =>
                 {
-                    b.HasOne("MojePszczoly.Models.Bread", "Bread")
+                    b.HasOne("MojePszczoly.Data.Models.Bread", "Bread")
                         .WithMany()
                         .HasForeignKey("BreadId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("MojePszczoly.Models.Order", null)
+                    b.HasOne("MojePszczoly.Data.Models.Order", "Order")
                         .WithMany("Items")
-                        .HasForeignKey("OrderItemId")
+                        .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Bread");
+
+                    b.Navigation("Order");
                 });
 
-            modelBuilder.Entity("MojePszczoly.Models.Order", b =>
+            modelBuilder.Entity("MojePszczoly.Data.Models.Order", b =>
                 {
                     b.Navigation("Items");
                 });
