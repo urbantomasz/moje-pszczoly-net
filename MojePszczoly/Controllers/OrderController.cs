@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MojePszczoly.Data;
 using MojePszczoly.Data.Models;
 using MojePszczoly.Models;
+using OfficeOpenXml;
 
 namespace MojePszczoly.Controllers
 {
@@ -28,7 +29,7 @@ namespace MojePszczoly.Controllers
             {
                 CustomerName = orderDto.CustomerName,
                 Phone = orderDto.Phone,
-                OrderDate = orderDto.OrderDate,
+                OrderDate = orderDto.OrderDate.Date,
                 Note = orderDto.Note,
                 Items = orderDto.Items.Select(itemDto => new OrderItem
                 {
@@ -49,7 +50,11 @@ namespace MojePszczoly.Controllers
             var orders = await _context.Orders
                 .Include(o => o.Items)
                 .ThenInclude(i => i.Bread)
+                .AsNoTracking()
+                .OrderBy(o => o.OrderDate)
                 .ToListAsync();
+
+            var dates = orders.Select(o => o.OrderDate.Date).Distinct();
 
             var orderDtos = orders.Select(o => new OrderDto
             {
@@ -57,7 +62,7 @@ namespace MojePszczoly.Controllers
                 CustomerName = o.CustomerName,
                 Note = o.Note,
                 Phone = o.Phone,
-                OrderDate = o.OrderDate,
+                OrderDate = o.OrderDate.Date,
                 Items = o.Items.Select(i => new OrderItemDto
                 {
                     OrderItemId = i.OrderItemId,
@@ -67,7 +72,13 @@ namespace MojePszczoly.Controllers
                 }).ToList()
             }).ToList();
 
-            return Ok(orderDtos);
+            var ordersDataDto = new OrdersDataDto
+            {
+                Orders = orderDtos,
+                Dates = dates.ToList() 
+            };
+
+            return Ok(ordersDataDto);
         }
 
 
@@ -110,8 +121,8 @@ namespace MojePszczoly.Controllers
             return Ok();
         }
 
-        [HttpGet("{date}")]
-        public async Task<IActionResult> GetOrdersByDate(DateTime date)
+        [HttpGet("report/excel/{date}")]
+        public async Task<IActionResult> GetOrdersReportExcel(DateTime date)
         {
             var orders = await _context.Orders
                 .Include(o => o.Items)
@@ -122,96 +133,37 @@ namespace MojePszczoly.Controllers
             if (!orders.Any())
                 return NotFound(new { message = "Brak zamówień na ten dzień." });
 
-            var groupedOrders = orders.Select(o => new
-            {
-                o.CustomerName,
-                Items = o.Items.Select(i => new { i.Bread.Name, i.Quantity }).ToList()
-            });
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            using var package = new ExcelPackage();
+            var worksheet = package.Workbook.Worksheets.Add("Raport Zamówień");
 
-            return Ok(new
-            {
-                Date = date.ToString("dd.MM.yyyy"),
-                Orders = groupedOrders
-            });
-        }
+            // Nagłówki kolumn
+            worksheet.Cells[1, 1].Value = "Data";
+            worksheet.Cells[1, 2].Value = "Kto";
+            worksheet.Cells[1, 3].Value = "Telefon";
+            worksheet.Cells[1, 4].Value = "Chleby";
+            worksheet.Cells[1, 5].Value = "Uwagi";
 
-        [HttpGet("report/{date}")]
-        public async Task<IActionResult> GetOrdersReport(DateTime date)
-        {
-            var orders = await _context.Orders
-                .Include(o => o.Items)
-                .ThenInclude(i => i.Bread)
-                .Where(o => o.OrderDate.Date == date.Date)
-                .ToListAsync();
-
-            if (!orders.Any())
-                return NotFound(new { message = "Brak zamówień na ten dzień." });
-
-            // Pobranie unikalnych typów chleba (nagłówki kolumn)
-            var breadTypes = _context.Breads.Select(b => b.Name).ToList();
-
-            // Lista do przechowywania tabeli
-            var table = new List<Dictionary<string, object>>();
-
-            // Inicjalizacja wiersza sumującego
-            var totalRow = new Dictionary<string, object>
-            {
-                { "Data", $"{date:dd.MM.yyyy} Total" },
-                { "Kto", "Razem" }
-            };
-
-            // Inicjalizacja sumy dla każdego chleba
-            foreach (var bread in breadTypes)
-                totalRow[bread] = 0;
-
-            // Dodanie zamówień do tabeli
+            int row = 2;
             foreach (var order in orders)
             {
-                var row = new Dictionary<string, object>
-                {
-                    { "Data", "" },
-                    { "Kto", order.CustomerName }
-                };
-
-                // Inicjalizacja wartości chleba na 0
-                foreach (var bread in breadTypes)
-                    row[bread] = 0;
-
-                // Wypełnianie tabeli danymi
-                foreach (var item in order.Items)
-                {
-                    if (row.ContainsKey(item.Bread.Name))
-                    {
-                        row[item.Bread.Name] = item.Quantity;
-                        totalRow[item.Bread.Name] = (int)totalRow[item.Bread.Name] + item.Quantity;
-                    }
-                }
-
-                table.Add(row);
+                worksheet.Cells[row, 1].Value = order.OrderDate.ToString("yyyy-MM-dd");
+                worksheet.Cells[row, 2].Value = order.CustomerName;
+                worksheet.Cells[row, 3].Value = order.Phone;
+                worksheet.Cells[row, 4].Value = string.Join(", ", order.Items.Select(i => $"{i.Bread.Name} ({i.Quantity})"));
+                worksheet.Cells[row, 5].Value = order.Note;
+                row++;
             }
 
-            // Dodanie wiersza sumującego dla tego dnia
-            table.Add(totalRow);
+            worksheet.Cells.AutoFitColumns();
 
-            // Grand Total - sumuje wszystkie zamówienia w historii
-            var grandTotalRow = new Dictionary<string, object>
-            {
-                { "Data", "Grand Total" },
-                { "Kto", "Suma wszystkich dni" }
-            };
+            var stream = new MemoryStream();
+            package.SaveAs(stream);
+            stream.Position = 0;
 
-            foreach (var bread in breadTypes)
-            {
-                grandTotalRow[bread] = await _context.OrderItems
-                    .Where(i => i.Bread.Name == bread)
-                    .SumAsync(i => i.Quantity);
-            }
-
-            // Dodanie Grand Total na końcu tabeli
-            table.Add(grandTotalRow);
-
-            return Ok(table);
+            return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Raport_{date:yyyy-MM-dd}.xlsx");
         }
+
 
 
     }
