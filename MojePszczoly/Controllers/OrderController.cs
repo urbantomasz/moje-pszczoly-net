@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MojePszczoly.Data;
 using MojePszczoly.Data.Models;
@@ -11,6 +12,7 @@ namespace MojePszczoly.Controllers
     [ApiController]
     public class OrderController : ControllerBase
     {
+        private static readonly List<string> AllowedEmails = new() { "urbantomasz94@gmail.com", "mojepszczolymk@gmail.com" };
         private readonly AppDbContext _context;
 
         public OrderController(AppDbContext context)
@@ -44,6 +46,7 @@ namespace MojePszczoly.Controllers
             return Ok(new { message = "Order created successfully!" });
         }
 
+        [Authorize(Policy = "AllowedEmailsOnly")]
         [HttpGet]
         public async Task<IActionResult> GetOrders()
         {
@@ -81,7 +84,7 @@ namespace MojePszczoly.Controllers
             return Ok(ordersDataDto);
         }
 
-
+        [Authorize(Policy = "AllowedEmailsOnly")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteOrder(int id)
         {
@@ -98,6 +101,7 @@ namespace MojePszczoly.Controllers
             return Ok();
         }
 
+        [Authorize(Policy = "AllowedEmailsOnly")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateOrder(int id, [FromBody] Order updatedOrder)
         {
@@ -121,6 +125,7 @@ namespace MojePszczoly.Controllers
             return Ok();
         }
 
+        [Authorize(Policy = "AllowedEmailsOnly")]
         [HttpGet("report/excel/{date}")]
         public async Task<IActionResult> GetOrdersReportExcel(DateTime date)
         {
