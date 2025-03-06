@@ -12,7 +12,6 @@ namespace MojePszczoly.Controllers
     [ApiController]
     public class OrderController : ControllerBase
     {
-        private static readonly List<string> AllowedEmails = new() { "urbantomasz94@gmail.com", "mojepszczolymk@gmail.com" };
         private readonly AppDbContext _context;
 
         public OrderController(AppDbContext context)
