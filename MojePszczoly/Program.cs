@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MojePszczoly.Data;
+using MojePszczoly.Services;
 using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +27,7 @@ builder.Services.AddAuthorization(options =>
         policy.RequireClaim(ClaimTypes.Email, "urbantomasz94@gmail.com", "mojepszczolymk@gmail.com"));
 });
 
+builder.Services.AddScoped<DateService>();
 
 builder.Services.AddControllers();
 builder.Services.AddDbContext<AppDbContext>(options =>

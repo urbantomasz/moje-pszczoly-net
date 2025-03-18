@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using MojePszczoly.Data;
 using MojePszczoly.Data.Models;
 using MojePszczoly.Models;
+using MojePszczoly.Services;
 using OfficeOpenXml;
 
 namespace MojePszczoly.Controllers
@@ -13,10 +14,12 @@ namespace MojePszczoly.Controllers
     public class OrderController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly DateService _dataService;
 
-        public OrderController(AppDbContext context)
+        public OrderController(AppDbContext context, DateService dateService, DateService dataService)
         {
             _context = context;
+            _dataService = dataService;
         }
 
         [HttpPost]
@@ -56,7 +59,7 @@ namespace MojePszczoly.Controllers
                 .OrderBy(o => o.OrderDate)
                 .ToListAsync();
 
-            var dates = orders.Select(o => o.OrderDate.Date).Distinct();
+            var dates = _dataService.GetUpcomingDates();
 
             var orderDtos = orders.Select(o => new OrderDto
             {
