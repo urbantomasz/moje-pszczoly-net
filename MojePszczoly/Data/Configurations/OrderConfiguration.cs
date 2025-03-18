@@ -25,10 +25,10 @@ namespace MojePszczoly.Data.Configurations
                    .IsRequired();
 
             builder.Property(o => o.CreatedAt)
-                   .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                   .HasDefaultValueSql("GETDATE()");
 
             builder.Property(o => o.UpdatedAt)
-                   .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                   .HasDefaultValueSql("GETDATE()");
 
             builder.HasMany(o => o.Items)
                    .WithOne()
