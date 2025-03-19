@@ -16,7 +16,9 @@ namespace MojePszczoly.Services
                 nextTuesday,
                 nextWednesday,
                 nextThursday
-            };
+            }
+            .OrderBy(d => d.Date)
+            .ToList();
         }
 
         private DateTime GetNextWeekday(DateTime startDate, DayOfWeek targetDay)
