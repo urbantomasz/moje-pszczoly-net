@@ -33,7 +33,7 @@ namespace MojePszczoly.Controllers
             {
                 CustomerName = orderDto.CustomerName,
                 Phone = orderDto.Phone,
-                OrderDate = orderDto.OrderDate.Date,
+                OrderDate = orderDto.OrderDate,
                 Note = orderDto.Note,
                 Items = orderDto.Items.Select(itemDto => new OrderItem
                 {
@@ -61,18 +61,18 @@ namespace MojePszczoly.Controllers
 
             var dates = _dataService.GetUpcomingDates();
 
+            orders.ForEach(o => o.OrderDate = DateTime.SpecifyKind(o.OrderDate, DateTimeKind.Utc));
+
             var orderDtos = orders.Select(o => new OrderDto
             {
                 OrderId = o.OrderId,
                 CustomerName = o.CustomerName,
                 Note = o.Note,
                 Phone = o.Phone,
-                OrderDate = o.OrderDate.Date,
+                OrderDate =  o.OrderDate.ToUniversalTime(),
                 Items = o.Items.Select(i => new OrderItemDto
                 {
-                    OrderItemId = i.OrderItemId,
                     BreadId = i.BreadId,
-                    BreadName = i.Bread.ShortName,
                     Quantity = i.Quantity
                 }).ToList()
             }).ToList();
@@ -105,7 +105,7 @@ namespace MojePszczoly.Controllers
 
         [Authorize(Policy = "AllowedEmailsOnly")]
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateOrder(int id, [FromBody] Order updatedOrder)
+        public async Task<IActionResult> UpdateOrder(int id, [FromBody] OrderUpdateDto updatedOrder)
         {
             var existingOrder = await _context.Orders
                 .Include(o => o.Items)
@@ -121,11 +121,18 @@ namespace MojePszczoly.Controllers
 
             _context.OrderItems.RemoveRange(existingOrder.Items);
 
-            existingOrder.Items = updatedOrder.Items;
+            existingOrder.Items = updatedOrder.Items
+                .Select(item => new OrderItem
+                {
+                    BreadId = item.BreadId,
+                    Quantity = item.Quantity,
+                    OrderId = id 
+                }).ToList();
 
             await _context.SaveChangesAsync();
             return Ok();
         }
+
 
         [Authorize(Policy = "AllowedEmailsOnly")]
         [HttpGet("report/excel/{date}")]
