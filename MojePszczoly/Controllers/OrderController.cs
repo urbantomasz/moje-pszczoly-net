@@ -6,6 +6,8 @@ using MojePszczoly.Data.Models;
 using MojePszczoly.Models;
 using MojePszczoly.Services;
 using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using System.Globalization;
 
 namespace MojePszczoly.Controllers
 {
@@ -52,16 +54,21 @@ namespace MojePszczoly.Controllers
         [HttpGet]
         public async Task<IActionResult> GetOrders()
         {
+            var dates = _dataService.GetUpcomingDates();
+
             var orders = await _context.Orders
                 .Include(o => o.Items)
                 .ThenInclude(i => i.Bread)
                 .AsNoTracking()
-                .OrderBy(o => o.OrderDate)
+                .Where(o => dates.Select(x => x.Date).Contains(o.OrderDate.Date))
+                .OrderByDescending(o => o.CreatedAt)
                 .ToListAsync();
 
-            var dates = _dataService.GetUpcomingDates();
-
-            orders.ForEach(o => o.OrderDate = DateTime.SpecifyKind(o.OrderDate, DateTimeKind.Utc));
+            orders.ForEach(o =>
+            {
+                o.OrderDate = DateTime.SpecifyKind(o.OrderDate, DateTimeKind.Utc);
+                o.CreatedAt = DateTime.SpecifyKind(o.CreatedAt, DateTimeKind.Utc);
+            });
 
             var orderDtos = orders.Select(o => new OrderDto
             {
@@ -69,7 +76,8 @@ namespace MojePszczoly.Controllers
                 CustomerName = o.CustomerName,
                 Note = o.Note,
                 Phone = o.Phone,
-                OrderDate =  o.OrderDate.ToUniversalTime(),
+                CreatedAt = o.CreatedAt,
+                OrderDate =  o.OrderDate,
                 Items = o.Items.Select(i => new OrderItemDto
                 {
                     BreadId = i.BreadId,
@@ -147,27 +155,71 @@ namespace MojePszczoly.Controllers
             if (!orders.Any())
                 return NotFound(new { message = "Brak zamówień na ten dzień." });
 
+            var allBreads = await _context.Breads
+                .OrderBy(b => b.SortOrder)
+                .ToListAsync();
+
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             using var package = new ExcelPackage();
             var worksheet = package.Workbook.Worksheets.Add("Raport Zamówień");
 
-            // Nagłówki kolumn
-            worksheet.Cells[1, 1].Value = "Data";
-            worksheet.Cells[1, 2].Value = "Kto";
-            worksheet.Cells[1, 3].Value = "Telefon";
-            worksheet.Cells[1, 4].Value = "Chleby";
-            worksheet.Cells[1, 5].Value = "Uwagi";
+            // 🔒 Zablokowanie wiersza nagłówków
+            worksheet.View.FreezePanes(2, 1);
+
+            // 🧠 Nagłówki
+            worksheet.Cells[1, 1].Value = "KTO";
+            worksheet.Cells[1, 2].Value = "KIEDY";
+            for (int i = 0; i < allBreads.Count; i++)
+            {
+                worksheet.Cells[1, i + 3].Value = allBreads[i].ShortName;
+            }
+
+            // ✨ Formatowanie nagłówków
+            using (var headerRange = worksheet.Cells[1, 1, 1, allBreads.Count + 2])
+            {
+                headerRange.Style.Font.Bold = true;
+                headerRange.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                headerRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
+                headerRange.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                headerRange.Style.Border.BorderAround(ExcelBorderStyle.Thin);
+            }
 
             int row = 2;
+
+
             foreach (var order in orders)
             {
-                worksheet.Cells[row, 1].Value = order.OrderDate.ToString("yyyy-MM-dd");
-                worksheet.Cells[row, 2].Value = order.CustomerName;
-                worksheet.Cells[row, 3].Value = order.Phone;
-                worksheet.Cells[row, 4].Value = string.Join(", ", order.Items.Select(i => $"{i.Bread.Name} ({i.Quantity})"));
-                worksheet.Cells[row, 5].Value = order.Note;
+                worksheet.Cells[row, 1].Value = order.CustomerName;
+                var polishTime = TimeZoneInfo.ConvertTimeFromUtc(order.OrderDate, TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time"));
+                worksheet.Cells[row, 2].Value = polishTime.ToString("dddd, dd.MM.yyyy", new CultureInfo("pl-PL"));
+
+
+
+                for (int i = 0; i < allBreads.Count; i++)
+                {
+                    var bread = allBreads[i];
+                    var item = order.Items.FirstOrDefault(x => x.BreadId == bread.BreadId);
+                    int quantity = item?.Quantity ?? 0;
+                    worksheet.Cells[row, i + 3].Value = quantity;
+                }
+
                 row++;
             }
+
+            // 📊 Wiersz sumy
+            worksheet.Cells[row, 1].Value = "SUMA";
+            for (int i = 0; i < allBreads.Count; i++)
+            {
+                var col = i + 3;
+                worksheet.Cells[row, col].Formula = $"SUM({worksheet.Cells[2, col].Address}:{worksheet.Cells[row - 1, col].Address})";
+            }
+
+            // 📦 Ramki wokół całej tabeli
+            var dataRange = worksheet.Cells[1, 1, row, allBreads.Count + 2];
+            dataRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
+            dataRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+            dataRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
+            dataRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
 
             worksheet.Cells.AutoFitColumns();
 
@@ -175,8 +227,15 @@ namespace MojePszczoly.Controllers
             package.SaveAs(stream);
             stream.Position = 0;
 
-            return File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", $"Raport_{date:yyyy-MM-dd}.xlsx");
+            return File(
+                stream,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"Raport_{date:yyyy-MM-dd}.xlsx"
+            );
         }
+
+
+
 
 
 
