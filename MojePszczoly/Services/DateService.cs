@@ -1,10 +1,11 @@
-﻿using System;
+﻿using MojePszczoly.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace MojePszczoly.Services
 {
-    public class DateService
+    public class DateService : IDateService
     {
         public List<DateTime> GetUpcomingDates()
         {

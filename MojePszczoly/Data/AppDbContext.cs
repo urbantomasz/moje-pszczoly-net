@@ -8,9 +8,9 @@ namespace MojePszczoly.Data
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        public DbSet<Bread> Breads { get; set; }
-        public DbSet<Order> Orders { get; set; }
-        public DbSet<OrderItem> OrderItems { get; set; }
+        public virtual DbSet<Bread> Breads { get; set; }
+        public virtual DbSet<Order> Orders { get; set; }
+        public virtual DbSet<OrderItem> OrderItems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

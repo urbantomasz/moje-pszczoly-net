@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MojePszczoly.Interfaces;
 using MojePszczoly.Services;
 
 namespace MojePszczoly.Controllers
@@ -8,8 +9,8 @@ namespace MojePszczoly.Controllers
     [ApiController]
     public class DateController : ControllerBase
     {
-        private readonly DateService _dataService;
-        public DateController(DateService dataService)
+        private readonly IDateService _dataService;
+        public DateController(IDateService dataService)
         {
             _dataService = dataService;
         }
