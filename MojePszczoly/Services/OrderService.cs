@@ -1,5 +1,6 @@
 ﻿// Services/OrderService.cs
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using MojePszczoly.Data;
 using MojePszczoly.Data.Models;
 using MojePszczoly.Interfaces;
@@ -14,11 +15,13 @@ namespace MojePszczoly.Services
     {
         private readonly AppDbContext _context;
         private readonly IDateService _dateService;
+        private readonly IMemoryCache _cache;
 
-        public OrderService(AppDbContext context, IDateService dateService)
+        public OrderService(AppDbContext context, IDateService dateService, IMemoryCache cache)
         {
             _context = context;
             _dateService = dateService;
+            _cache = cache;
         }
 
         public void CreateOrder(CreateOrderDto orderDto)
@@ -38,40 +41,51 @@ namespace MojePszczoly.Services
 
             _context.Orders.Add(order);
             _context.SaveChanges();
+            _cache.Remove("orders");
         }
 
         public async Task<List<OrderDto>> GetOrders()
         {
-            var dates = _dateService.GetUpcomingDates();
-
-            var orders = await _context.Orders
-                .Include(o => o.Items)
-                .ThenInclude(i => i.Bread)
-                .AsNoTracking()
-                .Where(o => dates.Select(x => x.Date).Contains(o.OrderDate.Date))
-                .OrderByDescending(o => o.CreatedAt)
-                .ToListAsync();
-
-            orders.ForEach(o =>
+            if (!_cache.TryGetValue("orders", out List<OrderDto> orders))
             {
-                o.OrderDate = DateTime.SpecifyKind(o.OrderDate, DateTimeKind.Utc);
-                o.CreatedAt = DateTime.SpecifyKind(o.CreatedAt, DateTimeKind.Utc);
-            });
+                var dates = _dateService.GetUpcomingDates();
 
-            return orders.Select(o => new OrderDto
-            {
-                OrderId = o.OrderId,
-                CustomerName = o.CustomerName,
-                Note = o.Note,
-                Phone = o.Phone,
-                CreatedAt = o.CreatedAt,
-                OrderDate = o.OrderDate,
-                Items = o.Items.Select(i => new OrderItemDto
+                var orderEntities = await _context.Orders
+                    .Include(o => o.Items)
+                    .ThenInclude(i => i.Bread)
+                    .AsNoTracking()
+                    .Where(o => dates.Select(x => x.Date).Contains(o.OrderDate.Date))
+                    .OrderByDescending(o => o.CreatedAt)
+                    .ToListAsync();
+
+                orderEntities.ForEach(o =>
                 {
-                    BreadId = i.BreadId,
-                    Quantity = i.Quantity
-                }).ToList()
-            }).ToList();
+                    o.OrderDate = DateTime.SpecifyKind(o.OrderDate, DateTimeKind.Utc);
+                    o.CreatedAt = DateTime.SpecifyKind(o.CreatedAt, DateTimeKind.Utc);
+                });
+
+                orders = orderEntities.Select(o => new OrderDto
+                {
+                    OrderId = o.OrderId,
+                    CustomerName = o.CustomerName,
+                    Note = o.Note,
+                    Phone = o.Phone,
+                    CreatedAt = o.CreatedAt,
+                    OrderDate = o.OrderDate,
+                    Items = o.Items.Select(i => new OrderItemDto
+                    {
+                        BreadId = i.BreadId,
+                        Quantity = i.Quantity
+                    }).ToList()
+                }).ToList();
+
+                var cacheEntryOptions = new MemoryCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(5));
+
+                _cache.Set("orders", orders, cacheEntryOptions);
+            }
+
+            return orders;
         }
 
         public async Task<bool> DeleteOrder(int id)
@@ -85,6 +99,7 @@ namespace MojePszczoly.Services
 
             _context.Orders.Remove(order);
             await _context.SaveChangesAsync();
+            _cache.Remove("orders");
             return true;
         }
 
@@ -113,6 +128,7 @@ namespace MojePszczoly.Services
                 }).ToList();
 
             await _context.SaveChangesAsync();
+            _cache.Remove("orders");
             return true;
         }
 

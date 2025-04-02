@@ -9,7 +9,7 @@ using System.Security.Claims;
 var builder = WebApplication.CreateBuilder(args);
 
 
-
+builder.Services.AddMemoryCache();
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -32,6 +32,7 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IDateService, DateService>();
+builder.Services.AddScoped<IBreadService, BreadService>();
 
 builder.Services.AddControllers();
 builder.Services.AddDbContext<AppDbContext>(options =>

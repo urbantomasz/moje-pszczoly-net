@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using MojePszczoly.Data;
 using MojePszczoly.Data.Models;
 using MojePszczoly.Interfaces;
@@ -10,14 +11,16 @@ public class OrderServiceTests
 {
     private readonly Mock<AppDbContext> _mockContext;
     private readonly Mock<IDateService> _mockDateService; 
+    private readonly Mock<IMemoryCache> _mockMemoryCache;
     private readonly IOrderService _orderService; 
 
     public OrderServiceTests()
     {
         var options = new DbContextOptions<AppDbContext>();
         _mockContext = new Mock<AppDbContext>(options);
-        _mockDateService = new Mock<IDateService>(); 
-        _orderService = new OrderService(_mockContext.Object, _mockDateService.Object);
+        _mockDateService = new Mock<IDateService>();
+        _mockMemoryCache = new Mock<IMemoryCache>();
+        _orderService = new OrderService(_mockContext.Object, _mockDateService.Object, _mockMemoryCache.Object);
     }
 
     [Fact]
