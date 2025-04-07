@@ -1,4 +1,5 @@
-﻿using MojePszczoly.Interfaces;
+﻿using MojePszczoly.Data;
+using MojePszczoly.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +8,12 @@ namespace MojePszczoly.Services
 {
     public class DateService : IDateService
     {
+        private readonly AppDbContext _context;
+        public DateService(AppDbContext dbContext)
+        {
+            _context = dbContext;
+        }
+      
         public List<DateTime> GetUpcomingDates()
         {
             TimeZoneInfo polandTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
@@ -22,6 +29,32 @@ namespace MojePszczoly.Services
                 .ToList();
         }
 
+        public List<DateTime> GetCurrentWeekDates()
+        {
+            TimeZoneInfo polandTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+            var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, polandTimeZone);
+
+            int diffToMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+            var monday = today.Date.AddDays(-diffToMonday);
+
+            var tuesday = monday.AddDays(1);
+            var wednesday = monday.AddDays(2);
+            var thursday = monday.AddDays(3);
+
+            return new List<DateTime> { tuesday, wednesday, thursday }
+                .Select(d => new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc))
+                .ToList();
+        }
+
+
+        public List<DateTime> GetPastDates()
+        {
+            return _context.Orders
+                .Select(o => o.OrderDate)
+                .Where(d => d < DateTime.UtcNow)
+                .Distinct()
+                .ToList();
+        }
 
         private DateTime GetNextWeekday(DateTime startDate, DayOfWeek targetDay)
         {

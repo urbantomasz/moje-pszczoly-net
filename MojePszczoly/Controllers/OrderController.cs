@@ -38,6 +38,15 @@ namespace MojePszczoly.Controllers
             return Ok(orders);
         }
 
+
+        [Authorize(Policy = "AllowedEmailsOnly")]
+        [HttpGet("date")]
+        public async Task<IActionResult> GetOrders(DateTime dateTime)
+        {
+            var orders = await _orderService.GetOrders(dateTime);
+            return Ok(orders);
+        }
+
         [Authorize(Policy = "AllowedEmailsOnly")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteOrder(int id)

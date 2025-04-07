@@ -49,4 +49,38 @@ public class OrderServiceTests
         mockSet.Verify(m => m.Add(It.IsAny<Order>()), Times.Once());
         _mockContext.Verify(m => m.SaveChanges(), Times.Once());
     }
+
+    [Fact]
+    public async Task UpdateOrder_UpdatesOrderInContext()
+    {
+        // Arrange
+        var order = new Order { OrderId = 1, CustomerName = "John Doe", Items = new List<OrderItem>() };
+        var updatedOrder = new OrderUpdateDto
+        {
+            CustomerName = "Jane Doe",
+            Phone = 987654321,
+            OrderDate = DateTime.UtcNow,
+            Note = "Updated note",
+            Items = new List<OrderItemDto>
+            {
+                new OrderItemDto { BreadId = 1, Quantity = 3 }
+            }
+        };
+
+        var mockSet = new Mock<DbSet<Order>>();
+        mockSet.Setup(m => m.FindAsync(1)).ReturnsAsync(order);
+        _mockContext.Setup(m => m.Orders).Returns(mockSet.Object);
+
+        // Act
+        var result = await _orderService.UpdateOrder(1, updatedOrder);
+
+        // Assert
+        Assert.True(result);
+        Assert.Equal("Jane Doe", order.CustomerName);
+        Assert.Equal(987654321, order.Phone);
+        Assert.Equal("Updated note", order.Note);
+        mockSet.Verify(m => m.Update(It.IsAny<Order>()), Times.Once());
+        _mockContext.Verify(m => m.SaveChangesAsync(default), Times.Once());
+    }
+
 }

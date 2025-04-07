@@ -19,5 +19,17 @@ namespace MojePszczoly.Controllers
         {
             return Ok(_dataService.GetUpcomingDates());
         }
+
+        [HttpGet("past")]
+        public IActionResult GetPastDates()
+        {
+            return Ok(_dataService.GetPastDates());
+        }
+
+        [HttpGet("current")]
+        public IActionResult GetCurrentWeekDates()
+        {
+            return Ok(_dataService.GetCurrentWeekDates());
+        }
     }
 }

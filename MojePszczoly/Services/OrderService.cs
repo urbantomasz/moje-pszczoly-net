@@ -44,11 +44,45 @@ namespace MojePszczoly.Services
             _cache.Remove("orders");
         }
 
+        public async Task<List<OrderDto>> GetOrders(DateTime date)
+        {
+                var orderEntities = await _context.Orders
+                    .Include(o => o.Items)
+                    .ThenInclude(i => i.Bread)
+                    .AsNoTracking()
+                    .Where(o => o.OrderDate.Date == date.Date)
+                    .OrderByDescending(o => o.CreatedAt)
+                    .ToListAsync();
+
+                orderEntities.ForEach(o =>
+                {
+                    o.OrderDate = DateTime.SpecifyKind(o.OrderDate, DateTimeKind.Utc);
+                    o.CreatedAt = DateTime.SpecifyKind(o.CreatedAt, DateTimeKind.Utc);
+                });
+
+                var orders = orderEntities.Select(o => new OrderDto
+                {
+                    OrderId = o.OrderId,
+                    CustomerName = o.CustomerName,
+                    Note = o.Note,
+                    Phone = o.Phone,
+                    CreatedAt = o.CreatedAt,
+                    OrderDate = o.OrderDate,
+                    Items = o.Items.Select(i => new OrderItemDto
+                    {
+                        BreadId = i.BreadId,
+                        Quantity = i.Quantity
+                    }).ToList()
+                }).ToList();
+            
+            return orders;
+        }
+
         public async Task<List<OrderDto>> GetOrders()
         {
             if (!_cache.TryGetValue("orders", out List<OrderDto> orders))
             {
-                var dates = _dateService.GetUpcomingDates();
+                var dates = _dateService.GetCurrentWeekDates();
 
                 var orderEntities = await _context.Orders
                     .Include(o => o.Items)

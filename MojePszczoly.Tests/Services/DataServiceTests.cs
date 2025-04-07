@@ -55,5 +55,16 @@ namespace MojePszczoly.Tests.Services
                 Assert.Equal(0, date.Second);
             }
         }
+
+        [Fact]
+        public void GetUpcomingDates_DatesIncludeSpecifiedDaysOfWeek()
+        {
+            // Act
+            var result = _dateService.GetUpcomingDates();
+
+            Assert.Contains(result, date => date.DayOfWeek == DayOfWeek.Tuesday);
+            Assert.Contains(result, date => date.DayOfWeek == DayOfWeek.Wednesday);
+            Assert.Contains(result, date => date.DayOfWeek == DayOfWeek.Thursday);
+        }
     }
 }

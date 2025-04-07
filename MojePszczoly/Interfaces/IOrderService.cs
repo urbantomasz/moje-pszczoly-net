@@ -6,6 +6,7 @@ namespace MojePszczoly.Interfaces
     {
         void CreateOrder(CreateOrderDto orderDto);
         Task<List<OrderDto>> GetOrders();
+        Task<List<OrderDto>> GetOrders(DateTime dateTime);
         Task<bool> DeleteOrder(int id);
         Task<bool> UpdateOrder(int id, OrderUpdateDto updatedOrder);
         Task<MemoryStream> GetOrdersReportExcel(DateTime date);
