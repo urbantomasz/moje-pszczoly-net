@@ -1,4 +1,6 @@
-﻿using MojePszczoly.Interfaces; 
+﻿using Microsoft.EntityFrameworkCore;
+using MojePszczoly.Data;
+using MojePszczoly.Interfaces; 
 using MojePszczoly.Services;
 using Moq;
 using Xunit;
@@ -8,10 +10,13 @@ namespace MojePszczoly.Tests.Services
     public class DateServiceTests
     {
         private readonly IDateService _dateService;
+        private readonly Mock<AppDbContext> _mockContext;
 
         public DateServiceTests()
         {
-            _dateService = new DateService();
+            var options = new DbContextOptions<AppDbContext>();
+            _mockContext = new Mock<AppDbContext>(options);
+            _dateService = new DateService(_mockContext.Object);
         }
 
         [Fact]
