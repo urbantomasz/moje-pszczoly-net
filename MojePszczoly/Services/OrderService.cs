@@ -82,7 +82,7 @@ namespace MojePszczoly.Services
         {
             if (!_cache.TryGetValue("orders", out List<OrderDto> orders))
             {
-                var dates = _dateService.GetCurrentWeekDates();
+                var dates = _dateService.GetUpcomingDates();
 
                 var orderEntities = await _context.Orders
                     .Include(o => o.Items)
