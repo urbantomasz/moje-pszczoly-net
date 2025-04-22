@@ -82,13 +82,13 @@ namespace MojePszczoly.Services
         {
             if (!_cache.TryGetValue("orders", out List<OrderDto> orders))
             {
-                var dates = _dateService.GetUpcomingDates().Concat(_dateService.GetCurrentWeekDates()).Distinct();
+                var currentWeekMonday = _dateService.GetCurrentWeekMonday();
 
                 var orderEntities = await _context.Orders
                     .Include(o => o.Items)
                     .ThenInclude(i => i.Bread)
                     .AsNoTracking()
-                    .Where(o => dates.Select(x => x.Date).Contains(o.OrderDate.Date))
+                    .Where(o => o.OrderDate.Date >= currentWeekMonday)
                     .OrderByDescending(o => o.CreatedAt)
                     .ToListAsync();
 

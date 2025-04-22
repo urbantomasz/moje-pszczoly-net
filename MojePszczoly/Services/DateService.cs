@@ -13,20 +13,31 @@ namespace MojePszczoly.Services
         {
             _context = dbContext;
         }
-      
+
+        //public List<DateTime> GetUpcomingDates()
+        //{
+        //    TimeZoneInfo polandTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+        //    var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, polandTimeZone);
+
+        //    var nextTuesday = GetNextWeekday(today, DayOfWeek.Tuesday);
+        //    var nextWednesday = GetNextWeekday(today, DayOfWeek.Wednesday);
+        //    var nextThursday = GetNextWeekday(today, DayOfWeek.Thursday);
+
+        //    return new List<DateTime> { nextTuesday, nextWednesday, nextThursday }
+        //        .Select(d => new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc))
+        //        .OrderBy(d => d)
+        //        .ToList();
+        //}
+
+
         public List<DateTime> GetUpcomingDates()
         {
-            TimeZoneInfo polandTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
-            var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, polandTimeZone);
+            int currentYear = DateTime.UtcNow.Year;
 
-            var nextTuesday = GetNextWeekday(today, DayOfWeek.Tuesday);
-            var nextWednesday = GetNextWeekday(today, DayOfWeek.Wednesday);
-            var nextThursday = GetNextWeekday(today, DayOfWeek.Thursday);
+            var april29 = new DateTime(currentYear, 4, 29, 0, 0, 0, DateTimeKind.Utc);
+            var may2 = new DateTime(currentYear, 5, 2, 0, 0, 0, DateTimeKind.Utc);
 
-            return new List<DateTime> { nextTuesday, nextWednesday, nextThursday }
-                .Select(d => new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc))
-                .OrderBy(d => d)
-                .ToList();
+            return new List<DateTime> { april29, may2 };
         }
 
         public List<DateTime> GetCurrentWeekDates()
@@ -60,6 +71,18 @@ namespace MojePszczoly.Services
         {
             int diff = ((int)targetDay - (int)startDate.DayOfWeek + 7) % 7;
             return startDate.AddDays(diff == 0 ? 7 : diff).Date; 
+        }
+
+
+        public DateTime GetCurrentWeekMonday()
+        {
+            TimeZoneInfo polandTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+            var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, polandTimeZone);
+
+            int diffToMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+            var monday = today.Date.AddDays(-diffToMonday);
+
+            return new DateTime(monday.Year, monday.Month, monday.Day, 0, 0, 0, DateTimeKind.Utc);
         }
     }
 
