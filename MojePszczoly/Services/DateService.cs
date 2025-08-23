@@ -23,7 +23,7 @@ namespace MojePszczoly.Services
             var nextWednesday = GetNextWeekday(today, DayOfWeek.Wednesday);
             var nextThursday = GetNextWeekday(today, DayOfWeek.Thursday);
 
-            return new List<DateTime> {  nextThursday }
+            return new List<DateTime> { nextTuesday, nextWednesday, nextThursday }
                 .Select(d => new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc))
                 .OrderBy(d => d)
                 .ToList();
