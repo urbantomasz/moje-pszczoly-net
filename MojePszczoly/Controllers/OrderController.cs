@@ -47,6 +47,16 @@ namespace MojePszczoly.Controllers
             return Ok(orders);
         }
 
+
+
+        [Authorize(Policy = "AllowedEmailsOnly")]
+        [HttpGet("history")]
+        public async Task<IActionResult> GetPastOrders()
+        {
+            var orders = await _orderService.GetPastOrders();
+            return Ok(orders);
+        }
+
         [Authorize(Policy = "AllowedEmailsOnly")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteOrder(int id)

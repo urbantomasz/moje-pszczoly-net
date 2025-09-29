@@ -8,6 +8,7 @@ using MojePszczoly.Models;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using System.Globalization;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace MojePszczoly.Services
 {
@@ -80,44 +81,63 @@ namespace MojePszczoly.Services
 
         public async Task<List<OrderDto>> GetOrders()
         {
-            if (!_cache.TryGetValue("orders", out List<OrderDto> orders))
+            if (!_cache.TryGetValue("orders:current", out List<OrderDto> orders))
             {
-                var currentWeekMonday = _dateService.GetCurrentWeekMonday();
-
-                var orderEntities = await _context.Orders
-                    .Include(o => o.Items)
-                    .ThenInclude(i => i.Bread)
-                    .AsNoTracking()
-                    .Where(o => o.OrderDate.Date >= currentWeekMonday)
-                    .OrderByDescending(o => o.CreatedAt)
-                    .ToListAsync();
-
-                orderEntities.ForEach(o =>
-                {
-                    o.OrderDate = DateTime.SpecifyKind(o.OrderDate, DateTimeKind.Utc);
-                    o.CreatedAt = DateTime.SpecifyKind(o.CreatedAt, DateTimeKind.Utc);
-                });
-
-                orders = orderEntities.Select(o => new OrderDto
-                {
-                    OrderId = o.OrderId,
-                    CustomerName = o.CustomerName,
-                    Note = o.Note,
-                    Phone = o.Phone,
-                    CreatedAt = o.CreatedAt,
-                    OrderDate = o.OrderDate,
-                    Items = o.Items.Select(i => new OrderItemDto
-                    {
-                        BreadId = i.BreadId,
-                        Quantity = i.Quantity
-                    }).ToList()
-                }).ToList();
-
-                var cacheEntryOptions = new MemoryCacheEntryOptions()
-                    .SetSlidingExpiration(TimeSpan.FromMinutes(5));
-
-                _cache.Set("orders", orders, cacheEntryOptions);
+                orders = await GetOrdersInternal(isCurrent: true);
+                _cache.Set("orders:current", orders, new MemoryCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(5)));
             }
+            return orders;
+        }
+
+        public async Task<List<OrderDto>> GetPastOrders()
+        {
+            if (!_cache.TryGetValue("orders:past", out List<OrderDto> orders))
+            {
+                orders = await GetOrdersInternal(isCurrent: false);
+                _cache.Set("orders:past", orders, new MemoryCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(5)));
+            }
+            return orders;
+        }
+
+        private async Task<List<OrderDto>> GetOrdersInternal(bool isCurrent)
+        {
+            var currentWeekMonday = _dateService.GetCurrentWeekMonday();
+
+            var query =  _context.Orders
+            .Include(o => o.Items)
+            .ThenInclude(i => i.Bread)
+            .AsNoTracking();
+
+            query = isCurrent
+                ? query.Where(o => o.OrderDate.Date >= currentWeekMonday)
+                : query.Where(o => o.OrderDate.Date < currentWeekMonday);
+
+            var orderEntities = await query
+            .OrderByDescending(o => o.CreatedAt)
+            .ToListAsync();
+
+            orderEntities.ForEach(o =>
+            {
+                o.OrderDate = DateTime.SpecifyKind(o.OrderDate, DateTimeKind.Utc);
+                o.CreatedAt = DateTime.SpecifyKind(o.CreatedAt, DateTimeKind.Utc);
+            });
+
+            var orders = orderEntities.Select(o => new OrderDto
+            {
+                OrderId = o.OrderId,
+                CustomerName = o.CustomerName,
+                Note = o.Note,
+                Phone = o.Phone,
+                CreatedAt = o.CreatedAt,
+                OrderDate = o.OrderDate,
+                Items = o.Items.Select(i => new OrderItemDto
+                {
+                    BreadId = i.BreadId,
+                    Quantity = i.Quantity
+                }).ToList()
+            }).ToList();
 
             return orders;
         }
@@ -232,6 +252,12 @@ namespace MojePszczoly.Services
                 var col = i + 3;
                 worksheet.Cells[row, col].Formula = $"SUM({worksheet.Cells[2, col].Address}:{worksheet.Cells[row - 1, col].Address})";
             }
+
+            // 👉 suma wszystkich chlebów w kolumnie 2 ("KIEDY")
+            var firstBreadCol = 3;
+            var lastBreadCol = allBreads.Count + 2;
+            worksheet.Cells[row, 2].Formula =
+                $"SUM({worksheet.Cells[row, firstBreadCol].Address}:{worksheet.Cells[row, lastBreadCol].Address})";
 
             // Ramki wokół całej tabeli
             var dataRange = worksheet.Cells[1, 1, row, allBreads.Count + 2];
