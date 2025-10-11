@@ -14,32 +14,32 @@ namespace MojePszczoly.Services
             _context = dbContext;
         }
 
-        //public List<DateTime> GetUpcomingDates()
-        //{
-        //    TimeZoneInfo polandTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
-        //    var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, polandTimeZone);
-
-        //    var nextTuesday = GetNextWeekday(today, DayOfWeek.Tuesday);
-        //    var nextWednesday = GetNextWeekday(today, DayOfWeek.Wednesday);
-        //    var nextThursday = GetNextWeekday(today, DayOfWeek.Thursday);
-
-        //    return new List<DateTime> { nextTuesday, nextWednesday, nextThursday }
-        //        .Select(d => new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc))
-        //        .OrderBy(d => d)
-        //        .ToList();
-        //}
-
-
         public List<DateTime> GetUpcomingDates()
         {
-            int currentYear = DateTime.UtcNow.Year;
-            var april31 = new DateTime(currentYear, 10, 1, 0, 0, 0, DateTimeKind.Utc);
-            var april30 = new DateTime(currentYear, 10, 2, 0, 0, 0, DateTimeKind.Utc);
-            var april29 = new DateTime(currentYear, 10, 9, 0, 0, 0, DateTimeKind.Utc);
-            var may2 = new DateTime(currentYear, 10, 10, 0, 0, 0, DateTimeKind.Utc);
+            TimeZoneInfo polandTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+            var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, polandTimeZone);
 
-            return new List<DateTime> { april29, may2 };
+            var nextTuesday = GetNextWeekday(today, DayOfWeek.Tuesday);
+            var nextWednesday = GetNextWeekday(today, DayOfWeek.Wednesday);
+            var nextThursday = GetNextWeekday(today, DayOfWeek.Thursday);
+
+            return new List<DateTime> { nextTuesday, nextWednesday, nextThursday }
+                .Select(d => new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc))
+                .OrderBy(d => d)
+                .ToList();
         }
+
+
+        //public List<DateTime> GetUpcomingDates()
+        //{
+        //    int currentYear = DateTime.UtcNow.Year;
+        //    var april31 = new DateTime(currentYear, 10, 1, 0, 0, 0, DateTimeKind.Utc);
+        //    var april30 = new DateTime(currentYear, 10, 2, 0, 0, 0, DateTimeKind.Utc);
+        //    var april29 = new DateTime(currentYear, 10, 9, 0, 0, 0, DateTimeKind.Utc);
+        //    var may2 = new DateTime(currentYear, 10, 10, 0, 0, 0, DateTimeKind.Utc);
+
+        //    return new List<DateTime> { april29, may2 };
+        //}
 
         public List<DateTime> GetCurrentWeekDates()
         {
