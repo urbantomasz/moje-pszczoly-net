@@ -24,10 +24,12 @@ namespace MojePszczoly.Services
             var nextThursday = GetNextWeekday(today, DayOfWeek.Thursday);
 
             return new List<DateTime> { nextTuesday, nextWednesday, nextThursday }
+                .Where(d => !(d.Day == 11 && d.Month == 11)) // odfiltrowanie 11 listopada
                 .Select(d => new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc))
                 .OrderBy(d => d)
                 .ToList();
         }
+
 
 
         //public List<DateTime> GetUpcomingDates()
