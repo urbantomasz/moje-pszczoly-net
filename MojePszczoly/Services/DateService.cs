@@ -33,13 +33,13 @@ namespace MojePszczoly.Services
         public List<DateTime> GetUpcomingDates()
         {
             int currentYear = DateTime.UtcNow.Year;
-            var date1 = new DateTime(currentYear, 12, 16, 0, 0, 0, DateTimeKind.Utc);
-            var date2 = new DateTime(currentYear, 12, 17, 0, 0, 0, DateTimeKind.Utc);
-            var date3 = new DateTime(currentYear, 12, 18, 0, 0, 0, DateTimeKind.Utc);
-            var date4 = new DateTime(currentYear, 12, 22, 0, 0, 0, DateTimeKind.Utc);
-            var date5 = new DateTime(currentYear, 12, 23, 0, 0, 0, DateTimeKind.Utc);
+            var date1 = new DateTime(2025, 12, 30, 0, 0, 0, DateTimeKind.Utc);
+            var date2 = new DateTime(2026, 1, 7, 0, 0, 0, DateTimeKind.Utc);
+            var date3 = new DateTime(2026, 1, 8, 0, 0, 0, DateTimeKind.Utc);
+            //var date4 = new DateTime(currentYear, 12, 22, 0, 0, 0, DateTimeKind.Utc);
+            //var date5 = new DateTime(currentYear, 12, 23, 0, 0, 0, DateTimeKind.Utc);
 
-            return new List<DateTime> { date1, date2, date3, date4, date5 };
+            return new List<DateTime> { date1, date2, date3 };
         }
 
         public List<DateTime> GetCurrentWeekDates()
