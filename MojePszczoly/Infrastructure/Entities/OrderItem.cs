@@ -1,6 +1,4 @@
-﻿ using System.ComponentModel.DataAnnotations;
-
-namespace MojePszczoly.Data.Models
+﻿namespace MojePszczoly.Infrastructure.Entities
 {
     public class OrderItem
     {
@@ -8,7 +6,7 @@ namespace MojePszczoly.Data.Models
         public int OrderId { get; set; }
         public int BreadId { get; set; }
         public int Quantity { get; set; }
-        public Order Order { get; set; }
-        public Bread Bread { get; set; }
+        public Order Order { get; set; } = null!;
+        public Bread Bread { get; set; } = null!;
     }
 }

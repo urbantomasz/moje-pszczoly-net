@@ -2,10 +2,8 @@
 {
     public interface IDateService
     {
-        List<DateTime> GetUpcomingDates();
-        List<DateTime> GetPastDates();
-        List<DateTime> GetCurrentWeekDates();
-
-        DateTime GetCurrentWeekMonday();
+        Task<List<DateOnly>> GetUpcomingDates();
+        List<DateOnly> GetCurrentWeekDates();
+        DateOnly GetCurrentWeekMonday();
     }
 }

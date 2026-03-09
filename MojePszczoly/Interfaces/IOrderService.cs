@@ -1,15 +1,15 @@
-﻿using MojePszczoly.Models;
+﻿using MojePszczoly.Contracts.Requests;
+using MojePszczoly.Contracts.Responses;
 
 namespace MojePszczoly.Interfaces
 {
     public interface IOrderService
     {
-        void CreateOrder(CreateOrderDto orderDto);
-        Task<List<OrderDto>> GetOrders();
-        Task<List<OrderDto>> GetOrders(DateTime dateTime);
-        Task<List<OrderDto>> GetPastOrders();
+        Task CreateOrder(CreateOrderRequest orderDto);
+        Task<List<OrderResponse>> GetOrders();
+        Task<List<OrderResponse>> GetOrders(DateOnly date);
+        Task<List<OrderResponse>> GetPastOrders();
         Task<bool> DeleteOrder(int id);
-        Task<bool> UpdateOrder(int id, OrderUpdateDto updatedOrder);
-        Task<MemoryStream> GetOrdersReportExcel(DateTime date);
+        Task<bool> UpdateOrder(int id, UpdateOrderRequest updatedOrder);
     }
 }

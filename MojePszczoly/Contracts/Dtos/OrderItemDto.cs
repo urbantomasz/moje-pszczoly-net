@@ -1,8 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
-namespace MojePszczoly.Models
+namespace MojePszczoly.Contracts.Dtos
 {
-    public class CreateOrderItemDto
+    public class OrderItemDto
     {
         [Required(ErrorMessage = "BreadId is required")]
         public int BreadId { get; set; }

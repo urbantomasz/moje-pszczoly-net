@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using MojePszczoly.Data;
-using MojePszczoly.Data.Models;
+using MojePszczoly.Contracts.Dtos;
+using MojePszczoly.Contracts.Requests;
+using MojePszczoly.Infrastructure;
+using MojePszczoly.Infrastructure.Entities;
 using MojePszczoly.Interfaces;
-using MojePszczoly.Models;
 using MojePszczoly.Services;
 using Moq;
 
@@ -20,22 +21,22 @@ public class OrderServiceTests
         _mockContext = new Mock<AppDbContext>(options);
         _mockDateService = new Mock<IDateService>();
         _mockMemoryCache = new Mock<IMemoryCache>();
-        _orderService = new OrderService(_mockContext.Object, _mockDateService.Object, _mockMemoryCache.Object);
+        _orderService = new OrderService(_mockContext.Object, _mockDateService.Object);
     }
 
     [Fact]
     public void CreateOrder_AddsOrderToContext()
     {
         // Arrange
-        var orderDto = new CreateOrderDto
+        var orderDto = new CreateOrderRequest
         {
             CustomerName = "John Doe",
             Phone = 123456789,
-            OrderDate = DateTime.UtcNow,
+            OrderDate = DateOnly.FromDateTime(DateTime.Now),
             Note = "Test note",
-            Items = new List<CreateOrderItemDto>
+            Items = new List<OrderItemDto>
             {
-                new CreateOrderItemDto { BreadId = 1, Quantity = 2 }
+                new OrderItemDto { BreadId = 1, Quantity = 2 }
             }
         };
 
@@ -55,11 +56,11 @@ public class OrderServiceTests
     {
         // Arrange
         var order = new Order { OrderId = 1, CustomerName = "John Doe", Items = new List<OrderItem>() };
-        var updatedOrder = new OrderUpdateDto
+        var updatedOrder = new UpdateOrderRequest
         {
             CustomerName = "Jane Doe",
             Phone = 987654321,
-            OrderDate = DateTime.UtcNow,
+            OrderDate = DateOnly.FromDateTime(DateTime.Now),
             Note = "Updated note",
             Items = new List<OrderItemDto>
             {

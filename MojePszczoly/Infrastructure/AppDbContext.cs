@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using MojePszczoly.Data.Configurations;
-using MojePszczoly.Data.Models;
+using MojePszczoly.Infrastructure.Configurations;
+using MojePszczoly.Infrastructure.Entities;
 
-namespace MojePszczoly.Data
+namespace MojePszczoly.Infrastructure
 {
     public class AppDbContext : DbContext
     {
@@ -11,12 +11,14 @@ namespace MojePszczoly.Data
         public virtual DbSet<Bread> Breads { get; set; }
         public virtual DbSet<Order> Orders { get; set; }
         public virtual DbSet<OrderItem> OrderItems { get; set; }
+        public virtual DbSet<DateOverride> DateOverrides { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfiguration(new BreadConfiguration());
             modelBuilder.ApplyConfiguration(new OrderConfiguration());
             modelBuilder.ApplyConfiguration(new OrderItemConfiguration());
+            modelBuilder.ApplyConfiguration(new DateOverrideConfiguration());
         }
     }
 }

@@ -1,91 +1,79 @@
-﻿using MojePszczoly.Data;
-using MojePszczoly.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using MojePszczoly.Interfaces;
 
 namespace MojePszczoly.Services
 {
     public class DateService : IDateService
     {
-        private readonly AppDbContext _context;
-        public DateService(AppDbContext dbContext)
+        private readonly IDateOverrideService _overrideService;
+        private readonly IDateTimeProvider _dateTimeProvider;
+        public DateService(IDateOverrideService overrideService, IDateTimeProvider dateTimeProvider)
         {
-            _context = dbContext;
+            _overrideService = overrideService;
+            _dateTimeProvider = dateTimeProvider;
         }
 
-        public List<DateTime> GetUpcomingDates()
+        public async Task<List<DateOnly>> GetUpcomingDates()
         {
-            TimeZoneInfo polandTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
-            var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, polandTimeZone);
+            var today = _dateTimeProvider.GetPolandNow();
 
-            var nextTuesday = GetNextWeekday(today, DayOfWeek.Tuesday);
-            var nextWednesday = GetNextWeekday(today, DayOfWeek.Wednesday);
-            var nextThursday = GetNextWeekday(today, DayOfWeek.Thursday);
+            var baseDates = new List<DateOnly>
+            {
+                GetNextWeekday(today, DayOfWeek.Tuesday),
+                GetNextWeekday(today, DayOfWeek.Wednesday),
+                GetNextWeekday(today, DayOfWeek.Thursday)
+            }
+            .ToList();
 
-            return new List<DateTime> { nextTuesday, nextWednesday, nextThursday }
-                .Where(d => !(d.Day == 17 && d.Month == 02)) // odfiltrowanie 11 listopada
-                .Select(d => new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc))
+            var overrides = await _overrideService.GetOverrides();
+
+            var excluded = overrides
+                .Where(o => !o.IsAdded)
+                .Select(o => o.Date)
+                .ToList();
+
+            var added = overrides
+                .Where(o => o.IsAdded)
+                .Select(o => o.Date)
+                .ToList();
+
+            var result = baseDates
+                .Where(d => !excluded.Contains(d))
+                .Concat(added)
+                .Distinct()
                 .OrderBy(d => d)
                 .ToList();
+
+            return result;
         }
 
-        //public List<DateTime> GetUpcomingDates()
-        //{
-        //    int currentYear = DateTime.UtcNow.Year;
-        //    var date1 = new DateTime(2025, 12, 30, 0, 0, 0, DateTimeKind.Utc);
-        //    var date2 = new DateTime(2026, 1, 7, 0, 0, 0, DateTimeKind.Utc);
-        //    var date3 = new DateTime(2026, 1, 8, 0, 0, 0, DateTimeKind.Utc);
-        //    //var date4 = new DateTime(currentYear, 12, 22, 0, 0, 0, DateTimeKind.Utc);
-        //    //var date5 = new DateTime(currentYear, 12, 23, 0, 0, 0, DateTimeKind.Utc);
-
-        //    return new List<DateTime> { date1, date2, date3 };
-        //}
-
-        public List<DateTime> GetCurrentWeekDates()
+        public List<DateOnly> GetCurrentWeekDates()
         {
-            TimeZoneInfo polandTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
-            var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, polandTimeZone);
+            var today = _dateTimeProvider.GetPolandNow();
 
             int diffToMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
-            var monday = today.Date.AddDays(-diffToMonday);
+            var monday = today.AddDays(-diffToMonday);
 
             var tuesday = monday.AddDays(1);
             var wednesday = monday.AddDays(2);
             var thursday = monday.AddDays(3);
 
-            return new List<DateTime> { tuesday, wednesday, thursday }
-                .Select(d => new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc))
-                .ToList();
+            return new List<DateOnly> { tuesday, wednesday, thursday }.ToList();
         }
 
-
-        public List<DateTime> GetPastDates()
-        {
-            return _context.Orders
-                .Select(o => o.OrderDate)
-                .Where(d => d < DateTime.UtcNow)
-                .Distinct()
-                .ToList();
-        }
-
-        private DateTime GetNextWeekday(DateTime startDate, DayOfWeek targetDay)
+        private DateOnly GetNextWeekday(DateOnly startDate, DayOfWeek targetDay)
         {
             int diff = ((int)targetDay - (int)startDate.DayOfWeek + 7) % 7;
-            return startDate.AddDays(diff == 0 ? 7 : diff).Date; 
+            return startDate.AddDays(diff == 0 ? 7 : diff); 
         }
 
-
-        public DateTime GetCurrentWeekMonday()
+        public DateOnly GetCurrentWeekMonday()
         {
-            TimeZoneInfo polandTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
-            var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, polandTimeZone);
+            var today = _dateTimeProvider.GetPolandNow();
 
             int diffToMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
-            var monday = today.Date.AddDays(-diffToMonday);
+            var monday = today.AddDays(-diffToMonday);
 
-            return new DateTime(monday.Year, monday.Month, monday.Day, 0, 0, 0, DateTimeKind.Utc);
+            return monday;
         }
     }
-
 }

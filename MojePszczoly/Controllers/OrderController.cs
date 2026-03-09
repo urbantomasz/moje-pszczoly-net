@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using MojePszczoly.Data;
+using MojePszczoly.Contracts.Requests;
+using MojePszczoly.Contracts.Responses;
 using MojePszczoly.Interfaces;
-using MojePszczoly.Models;
-using MojePszczoly.Services;
+
 
 namespace MojePszczoly.Controllers
 {
@@ -12,46 +12,37 @@ namespace MojePszczoly.Controllers
     public class OrderController : ControllerBase
     {
         private readonly IOrderService _orderService;
+        private readonly IOrderReportService _orderReportService;
 
-        public OrderController(IOrderService orderService)
+        public OrderController(IOrderService orderService, IOrderReportService orderReportService)
         {
             _orderService = orderService;
+            _orderReportService = orderReportService;
         }
 
         [HttpPost]
-        public IActionResult CreateOrder([FromBody] CreateOrderDto orderDto)
+        public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            _orderService.CreateOrder(orderDto);
-            return Ok(new { message = "Order created successfully!" });
+            await _orderService.CreateOrder(request);
+
+            return Created(string.Empty, new { message = "Order created successfully!" });
         }
-
-
 
         [Authorize(Policy = "AllowedEmailsOnly")]
         [HttpGet]
-        public async Task<IActionResult> GetOrders()
+        public async Task<ActionResult<List<OrderResponse>>> GetOrders()
         {
             var orders = await _orderService.GetOrders();
+
             return Ok(orders);
         }
-
-
-        [Authorize(Policy = "AllowedEmailsOnly")]
-        [HttpGet("date")]
-        public async Task<IActionResult> GetOrders(DateTime dateTime)
-        {
-            var orders = await _orderService.GetOrders(dateTime);
-            return Ok(orders);
-        }
-
-
 
         [Authorize(Policy = "AllowedEmailsOnly")]
         [HttpGet("history")]
-        public async Task<IActionResult> GetPastOrders()
+        public async Task<ActionResult<List<OrderResponse>>> GetPastOrders()
         {
             var orders = await _orderService.GetPastOrders();
             return Ok(orders);
@@ -59,20 +50,22 @@ namespace MojePszczoly.Controllers
 
         [Authorize(Policy = "AllowedEmailsOnly")]
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteOrder(int id)
+        public async Task<ActionResult> DeleteOrder(int id)
         {
             var result = await _orderService.DeleteOrder(id);
+
             if (!result)
                 return NotFound();
 
-            return Ok();
+            return NoContent();
         }
 
         [Authorize(Policy = "AllowedEmailsOnly")]
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateOrder(int id, [FromBody] OrderUpdateDto updatedOrder)
+        public async Task<ActionResult> UpdateOrder(int id, [FromBody] UpdateOrderRequest request)
         {
-            var result = await _orderService.UpdateOrder(id, updatedOrder);
+            var result = await _orderService.UpdateOrder(id, request);
+
             if (!result)
                 return NotFound();
 
@@ -81,9 +74,10 @@ namespace MojePszczoly.Controllers
 
         [Authorize(Policy = "AllowedEmailsOnly")]
         [HttpGet("report/excel/{date}")]
-        public async Task<IActionResult> GetOrdersReportExcel(DateTime date)
+        public async Task<ActionResult> GetOrdersReportExcel(DateOnly date)
         {
-            var stream = await _orderService.GetOrdersReportExcel(date);
+            var stream = await _orderReportService.GetOrdersReportExcel(date);
+
             if (stream == null)
                 return NotFound(new { message = "Brak zamówień na ten dzień." });
 

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using MojePszczoly.Data;
+using MojePszczoly.Infrastructure;
 
 #nullable disable
 
@@ -50,6 +50,33 @@ namespace MojePszczoly.Migrations
                     b.ToTable("Breads");
                 });
 
+            modelBuilder.Entity("MojePszczoly.Data.Models.DateOverride", b =>
+                {
+                    b.Property<int>("DateOverrideId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DateOverrideId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsAdded")
+                        .HasColumnType("bit");
+
+                    b.HasKey("DateOverrideId");
+
+                    b.HasIndex("Date")
+                        .IsUnique();
+
+                    b.ToTable("DateOverrides");
+                });
+
             modelBuilder.Entity("MojePszczoly.Data.Models.Order", b =>
                 {
                     b.Property<int>("OrderId")
@@ -72,8 +99,8 @@ namespace MojePszczoly.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<DateTime>("OrderDate")
-                        .HasColumnType("datetime2");
+                    b.Property<DateOnly>("OrderDate")
+                        .HasColumnType("date");
 
                     b.Property<int>("Phone")
                         .HasMaxLength(9)

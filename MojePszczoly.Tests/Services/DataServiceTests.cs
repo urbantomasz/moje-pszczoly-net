@@ -1,31 +1,39 @@
-﻿using Microsoft.EntityFrameworkCore;
-using MojePszczoly.Data;
+﻿using MojePszczoly.Infrastructure.Entities;
 using MojePszczoly.Interfaces; 
 using MojePszczoly.Services;
 using Moq;
-using Xunit;
 
 namespace MojePszczoly.Tests.Services
 {
     public class DateServiceTests
     {
         private readonly IDateService _dateService;
-        private readonly Mock<AppDbContext> _mockContext;
+        private readonly Mock<IDateOverrideService> _mockDateOverrideService;
+        private readonly Mock<IDateTimeProvider> _mockDateTimeProvider;
 
         public DateServiceTests()
         {
-            var options = new DbContextOptions<AppDbContext>();
-            _mockContext = new Mock<AppDbContext>(options);
-            _dateService = new DateService(_mockContext.Object);
+            _mockDateOverrideService = new Mock<IDateOverrideService>();
+            _mockDateTimeProvider = new Mock<IDateTimeProvider>();
+
+            _mockDateTimeProvider
+                .Setup(p => p.GetPolandNow())
+                .Returns(new DateOnly(2026, 3, 4));
+
+            _mockDateOverrideService
+                .Setup(s => s.GetOverrides())
+                .ReturnsAsync(new List<DateOverride>());
+
+            _dateService = new DateService(_mockDateOverrideService.Object, _mockDateTimeProvider.Object);
         }
 
         [Fact]
-        public void GetUpcomingDates_ReturnsThreeUpcomingDates()
+        public async Task GetUpcomingDates_ReturnsThreeUpcomingDates()
         {
             // Arrange - Already set up in the constructor
 
             // Act
-            var result = _dateService.GetUpcomingDates();
+            var result = await _dateService.GetUpcomingDates();
 
             // Assert
             Assert.Equal(3, result.Count);
@@ -33,39 +41,12 @@ namespace MojePszczoly.Tests.Services
             Assert.True(result[1] < result[2]);
         }
 
-        [Fact]
-        public void GetUpcomingDates_DatesAreInUtc()
-        {
-            // Act
-            var result = _dateService.GetUpcomingDates();
-
-            // Assert
-            foreach (var date in result)
-            {
-                Assert.Equal(DateTimeKind.Utc, date.Kind);
-            }
-        }
 
         [Fact]
-        public void GetUpcomingDates_DatesHaveCorrectTime()
+        public async Task GetUpcomingDates_DatesIncludeSpecifiedDaysOfWeek()
         {
             // Act
-            var result = _dateService.GetUpcomingDates();
-
-            // Assert
-            foreach (var date in result)
-            {
-                Assert.Equal(0, date.Hour);
-                Assert.Equal(0, date.Minute);
-                Assert.Equal(0, date.Second);
-            }
-        }
-
-        [Fact]
-        public void GetUpcomingDates_DatesIncludeSpecifiedDaysOfWeek()
-        {
-            // Act
-            var result = _dateService.GetUpcomingDates();
+            var result = await _dateService.GetUpcomingDates();
 
             Assert.Contains(result, date => date.DayOfWeek == DayOfWeek.Tuesday);
             Assert.Contains(result, date => date.DayOfWeek == DayOfWeek.Wednesday);

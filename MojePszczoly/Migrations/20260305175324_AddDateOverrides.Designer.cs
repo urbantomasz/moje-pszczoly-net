@@ -12,8 +12,8 @@ using MojePszczoly.Infrastructure;
 namespace MojePszczoly.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20250318115352_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260305175324_AddDateOverrides")]
+    partial class AddDateOverrides
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -53,6 +53,33 @@ namespace MojePszczoly.Migrations
                     b.ToTable("Breads");
                 });
 
+            modelBuilder.Entity("MojePszczoly.Data.Models.DateOverride", b =>
+                {
+                    b.Property<int>("DateOverrideId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DateOverrideId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsAdded")
+                        .HasColumnType("bit");
+
+                    b.HasKey("DateOverrideId");
+
+                    b.HasIndex("Date")
+                        .IsUnique();
+
+                    b.ToTable("DateOverrides");
+                });
+
             modelBuilder.Entity("MojePszczoly.Data.Models.Order", b =>
                 {
                     b.Property<int>("OrderId")
@@ -75,8 +102,8 @@ namespace MojePszczoly.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<DateTime>("OrderDate")
-                        .HasColumnType("datetime2");
+                    b.Property<DateOnly>("OrderDate")
+                        .HasColumnType("date");
 
                     b.Property<int>("Phone")
                         .HasMaxLength(9)

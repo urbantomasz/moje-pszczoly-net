@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore;
-using MojePszczoly.Data.Models;
+using MojePszczoly.Infrastructure.Entities;
 
-namespace MojePszczoly.Data.Configurations
+namespace MojePszczoly.Infrastructure.Configurations
 {
     public class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem>
     {

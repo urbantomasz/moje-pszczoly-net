@@ -1,5 +1,6 @@
-﻿using MojePszczoly.Data;
-using MojePszczoly.Data.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using MojePszczoly.Contracts.Responses;
+using MojePszczoly.Infrastructure;
 using MojePszczoly.Interfaces;
 
 namespace MojePszczoly.Services
@@ -10,9 +11,17 @@ namespace MojePszczoly.Services
         public BreadService(AppDbContext context) {
             _context =context;
         }
-        public List<Bread> GetBreads()
+        public async Task<List<BreadResponse>> GetBreads()
         {
-            return _context.Breads.ToList();
+            return await _context.Breads.AsNoTracking()
+                .Select(b => new BreadResponse
+                {
+                    BreadId = b.BreadId,
+                    Name = b.Name,
+                    ShortName = b.ShortName,
+                    SortOrder = b.SortOrder
+                })
+                .ToListAsync();
         }
     }
 }

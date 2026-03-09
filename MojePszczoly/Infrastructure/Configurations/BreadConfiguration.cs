@@ -1,8 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using MojePszczoly.Data.Models;
+using MojePszczoly.Infrastructure.Entities;
 
-namespace MojePszczoly.Data.Configurations
+namespace MojePszczoly.Infrastructure.Configurations
 {
     public class BreadConfiguration : IEntityTypeConfiguration<Bread>
     {

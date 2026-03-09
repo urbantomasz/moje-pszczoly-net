@@ -1,12 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using MojePszczoly.Contracts.Dtos;
 
-namespace MojePszczoly.Models
+namespace MojePszczoly.Contracts.Requests
 {
-    public class CreateOrderDto
+    public class CreateOrderRequest
     {
         [Required(ErrorMessage = "Customer Name is required")]
         [MinLength(3, ErrorMessage = "Customer Name must be at least 3 characters")]
-        public string CustomerName { get; set; }
+        public required string CustomerName { get; set; }
 
         public string? Note { get; set; }
 
@@ -14,9 +15,9 @@ namespace MojePszczoly.Models
         public int Phone { get; set; }
 
         [Required(ErrorMessage = "Order date is required")]
-        public DateTime OrderDate { get; set; }
+        public DateOnly OrderDate { get; set; }
 
         [MinLength(1, ErrorMessage = "At least one item is required")]
-        public List<CreateOrderItemDto> Items { get; set; } = new();
+        public List<OrderItemDto> Items { get; set; } = new();
     }
 }

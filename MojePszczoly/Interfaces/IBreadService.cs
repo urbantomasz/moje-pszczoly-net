@@ -1,9 +1,9 @@
-﻿using MojePszczoly.Data.Models;
+﻿using MojePszczoly.Contracts.Responses;
 
 namespace MojePszczoly.Interfaces
 {
     public interface IBreadService
     {
-        List<Bread> GetBreads();
+        Task<List<BreadResponse>> GetBreads();
     }
 }

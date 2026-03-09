@@ -1,7 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Mvc;  
 using MojePszczoly.Interfaces;
-using MojePszczoly.Services;
 
 namespace MojePszczoly.Controllers
 {
@@ -10,24 +8,22 @@ namespace MojePszczoly.Controllers
     public class DateController : ControllerBase
     {
         private readonly IDateService _dataService;
+
         public DateController(IDateService dataService)
         {
             _dataService = dataService;
         }
-        [HttpGet]
-        public IActionResult GetUpcomingDates()
-        {
-            return Ok(_dataService.GetUpcomingDates());
-        }
 
-        [HttpGet("past")]
-        public IActionResult GetPastDates()
+        [HttpGet]
+        [ProducesResponseType(typeof(List<DateOnly>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<List<DateOnly>>> GetUpcomingDates()
         {
-            return Ok(_dataService.GetPastDates());
+            return Ok(await _dataService.GetUpcomingDates());
         }
 
         [HttpGet("current")]
-        public IActionResult GetCurrentWeekDates()
+        [ProducesResponseType(typeof(List<DateOnly>), StatusCodes.Status200OK)]
+        public ActionResult<List<DateOnly>> GetCurrentWeekDates()
         {
             return Ok(_dataService.GetCurrentWeekDates());
         }

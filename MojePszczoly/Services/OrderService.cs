@@ -1,14 +1,10 @@
-﻿// Services/OrderService.cs
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
-using MojePszczoly.Data;
-using MojePszczoly.Data.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using MojePszczoly.Contracts.Dtos;
+using MojePszczoly.Contracts.Requests;
+using MojePszczoly.Contracts.Responses;
+using MojePszczoly.Infrastructure;
+using MojePszczoly.Infrastructure.Entities;
 using MojePszczoly.Interfaces;
-using MojePszczoly.Models;
-using OfficeOpenXml;
-using OfficeOpenXml.Style;
-using System.Globalization;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace MojePszczoly.Services
 {
@@ -16,16 +12,14 @@ namespace MojePszczoly.Services
     {
         private readonly AppDbContext _context;
         private readonly IDateService _dateService;
-        private readonly IMemoryCache _cache;
 
-        public OrderService(AppDbContext context, IDateService dateService, IMemoryCache cache)
+        public OrderService(AppDbContext context, IDateService dateService)
         {
             _context = context;
             _dateService = dateService;
-            _cache = cache;
         }
 
-        public void CreateOrder(CreateOrderDto orderDto)
+        public async Task CreateOrder(CreateOrderRequest orderDto)
         {
             var order = new Order
             {
@@ -40,28 +34,26 @@ namespace MojePszczoly.Services
                 }).ToList()
             };
 
-            _context.Orders.Add(order);
-            _context.SaveChanges();
-            _cache.Remove("orders");
+            await _context.Orders.AddAsync(order);
+            await _context.SaveChangesAsync();
         }
 
-        public async Task<List<OrderDto>> GetOrders(DateTime date)
+        public async Task<List<OrderResponse>> GetOrders(DateOnly date)
         {
                 var orderEntities = await _context.Orders
                     .Include(o => o.Items)
                     .ThenInclude(i => i.Bread)
                     .AsNoTracking()
-                    .Where(o => o.OrderDate.Date == date.Date)
+                    .Where(o => o.OrderDate == date)
                     .OrderByDescending(o => o.CreatedAt)
                     .ToListAsync();
 
                 orderEntities.ForEach(o =>
                 {
-                    o.OrderDate = DateTime.SpecifyKind(o.OrderDate, DateTimeKind.Utc);
                     o.CreatedAt = DateTime.SpecifyKind(o.CreatedAt, DateTimeKind.Utc);
                 });
 
-                var orders = orderEntities.Select(o => new OrderDto
+                var orders = orderEntities.Select(o => new OrderResponse
                 {
                     OrderId = o.OrderId,
                     CustomerName = o.CustomerName,
@@ -79,29 +71,17 @@ namespace MojePszczoly.Services
             return orders;
         }
 
-        public async Task<List<OrderDto>> GetOrders()
+        public async Task<List<OrderResponse>> GetOrders()
         {
-            if (!_cache.TryGetValue("orders:current", out List<OrderDto> orders))
-            {
-                orders = await GetOrdersInternal(isCurrent: true);
-                _cache.Set("orders:current", orders, new MemoryCacheEntryOptions()
-                    .SetSlidingExpiration(TimeSpan.FromMinutes(5)));
-            }
-            return orders;
+            return await GetOrdersInternal(isCurrent: true);
         }
 
-        public async Task<List<OrderDto>> GetPastOrders()
+        public async Task<List<OrderResponse>> GetPastOrders()
         {
-            if (!_cache.TryGetValue("orders:past", out List<OrderDto> orders))
-            {
-                orders = await GetOrdersInternal(isCurrent: false);
-                _cache.Set("orders:past", orders, new MemoryCacheEntryOptions()
-                    .SetSlidingExpiration(TimeSpan.FromMinutes(5)));
-            }
-            return orders;
+            return await GetOrdersInternal(isCurrent: false);
         }
 
-        private async Task<List<OrderDto>> GetOrdersInternal(bool isCurrent)
+        private async Task<List<OrderResponse>> GetOrdersInternal(bool isCurrent)
         {
             var currentWeekMonday = _dateService.GetCurrentWeekMonday();
 
@@ -111,8 +91,8 @@ namespace MojePszczoly.Services
             .AsNoTracking();
 
             query = isCurrent
-                ? query.Where(o => o.OrderDate.Date >= currentWeekMonday)
-                : query.Where(o => o.OrderDate.Date < currentWeekMonday);
+                ? query.Where(o => o.OrderDate >= currentWeekMonday)
+                : query.Where(o => o.OrderDate < currentWeekMonday);
 
             var orderEntities = await query
             .OrderByDescending(o => o.CreatedAt)
@@ -120,11 +100,10 @@ namespace MojePszczoly.Services
 
             orderEntities.ForEach(o =>
             {
-                o.OrderDate = DateTime.SpecifyKind(o.OrderDate, DateTimeKind.Utc);
                 o.CreatedAt = DateTime.SpecifyKind(o.CreatedAt, DateTimeKind.Utc);
             });
 
-            var orders = orderEntities.Select(o => new OrderDto
+            var orders = orderEntities.Select(o => new OrderResponse
             {
                 OrderId = o.OrderId,
                 CustomerName = o.CustomerName,
@@ -153,11 +132,11 @@ namespace MojePszczoly.Services
 
             _context.Orders.Remove(order);
             await _context.SaveChangesAsync();
-            _cache.Remove("orders");
+         
             return true;
         }
 
-        public async Task<bool> UpdateOrder(int id, OrderUpdateDto updatedOrder)
+        public async Task<bool> UpdateOrder(int id, UpdateOrderRequest updatedOrder)
         {
             var existingOrder = await _context.Orders
                 .Include(o => o.Items)
@@ -182,97 +161,8 @@ namespace MojePszczoly.Services
                 }).ToList();
 
             await _context.SaveChangesAsync();
-            _cache.Remove("orders");
+          
             return true;
         }
-
-        public async Task<MemoryStream> GetOrdersReportExcel(DateTime date)
-        {
-            var orders = await _context.Orders
-                .Include(o => o.Items)
-                .ThenInclude(i => i.Bread)
-                .Where(o => o.OrderDate.Date == date.Date)
-                .ToListAsync();
-
-            if (!orders.Any())
-                return null;
-
-            var allBreads = await _context.Breads
-                .OrderBy(b => b.SortOrder)
-                .ToListAsync();
-
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            using var package = new ExcelPackage();
-            var worksheet = package.Workbook.Worksheets.Add("Raport Zamówień");
-
-            // Zablokowanie wiersza nagłówków
-            worksheet.View.FreezePanes(2, 1);
-
-            // Nagłówki
-            worksheet.Cells[1, 1].Value = "KTO";
-            worksheet.Cells[1, 2].Value = "KIEDY";
-            for (int i = 0; i < allBreads.Count; i++)
-            {
-                worksheet.Cells[1, i + 3].Value = allBreads[i].ShortName;
-            }
-
-            // Formatowanie nagłówków
-            using (var headerRange = worksheet.Cells[1, 1, 1, allBreads.Count + 2])
-            {
-                headerRange.Style.Font.Bold = true;
-                headerRange.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                headerRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
-                headerRange.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
-                headerRange.Style.Border.BorderAround(ExcelBorderStyle.Thin);
-            }
-
-            int row = 2;
-
-            foreach (var order in orders)
-            {
-                worksheet.Cells[row, 1].Value = order.CustomerName;
-                var polishTime = TimeZoneInfo.ConvertTimeFromUtc(order.OrderDate, TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time"));
-                worksheet.Cells[row, 2].Value = polishTime.ToString("dddd, dd.MM.yyyy", new CultureInfo("pl-PL"));
-
-                for (int i = 0; i < allBreads.Count; i++)
-                {
-                    var bread = allBreads[i];
-                    var item = order.Items.FirstOrDefault(x => x.BreadId == bread.BreadId);
-                    int quantity = item?.Quantity ?? 0;
-                    worksheet.Cells[row, i + 3].Value = quantity;
-                }
-
-                row++;
-            }
-
-            // Wiersz sumy
-            worksheet.Cells[row, 1].Value = "SUMA";
-            for (int i = 0; i < allBreads.Count; i++)
-            {
-                var col = i + 3;
-                worksheet.Cells[row, col].Formula = $"SUM({worksheet.Cells[2, col].Address}:{worksheet.Cells[row - 1, col].Address})";
-            }
-
-            // 👉 suma wszystkich chlebów w kolumnie 2 ("KIEDY")
-            var firstBreadCol = 3;
-            var lastBreadCol = allBreads.Count + 2;
-            worksheet.Cells[row, 2].Formula =
-                $"SUM({worksheet.Cells[row, firstBreadCol].Address}:{worksheet.Cells[row, lastBreadCol].Address})";
-
-            // Ramki wokół całej tabeli
-            var dataRange = worksheet.Cells[1, 1, row, allBreads.Count + 2];
-            dataRange.Style.Border.Top.Style = ExcelBorderStyle.Thin;
-            dataRange.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-            dataRange.Style.Border.Left.Style = ExcelBorderStyle.Thin;
-            dataRange.Style.Border.Right.Style = ExcelBorderStyle.Thin;
-
-            worksheet.Cells.AutoFitColumns();
-
-            var stream = new MemoryStream();
-            package.SaveAs(stream);
-            stream.Position = 0;
-
-            return stream;
-        }
-    }
+    }   
 }

@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using MojePszczoly.Data;
+using MojePszczoly.Contracts.Responses;
 using MojePszczoly.Interfaces;
 
 namespace MojePszczoly.Controllers
@@ -10,15 +10,16 @@ namespace MojePszczoly.Controllers
     {
         private readonly IBreadService _breadService;
 
-        public BreadController(AppDbContext context, IBreadService breadService)
+        public BreadController(IBreadService breadService)
         {
             _breadService = breadService;
         }
 
         [HttpGet]
-        public IActionResult GetBreads()
+        [ProducesResponseType(typeof(List<BreadResponse>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<List<BreadResponse>>> GetBreads()
         {
-            return Ok(_breadService.GetBreads());
+            return Ok(await _breadService.GetBreads());
         }
     }
 }
