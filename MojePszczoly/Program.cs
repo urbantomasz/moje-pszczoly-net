@@ -2,7 +2,10 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MojePszczoly.Infrastructure;
+using MojePszczoly.Infrastructure.Mappings;
 using MojePszczoly.Interfaces;
+using MojePszczoly.Interfaces.Repositories;
+using MojePszczoly.Repositories;
 using MojePszczoly.Services;
 using System.Security.Claims;
 
@@ -31,6 +34,11 @@ builder.Services.AddAuthorization(options =>
         policy.RequireClaim(ClaimTypes.Email, adminEmails!));
 });
 
+builder.Services.AddAutoMapper(typeof(MappingProfile));
+builder.Services.AddScoped<IBreadRepository, BreadRepository>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IDateOverrideRepository, DateOverrideRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderReportService, OrderReportService>();
 builder.Services.AddScoped<IDateService, DateService>();

@@ -1,74 +1,39 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using AutoMapper;
 using MojePszczoly.Contracts.Dtos;
 using MojePszczoly.Contracts.Requests;
 using MojePszczoly.Contracts.Responses;
-using MojePszczoly.Infrastructure;
 using MojePszczoly.Infrastructure.Entities;
 using MojePszczoly.Interfaces;
+using MojePszczoly.Interfaces.Repositories;
 
 namespace MojePszczoly.Services
 {
     public class OrderService : IOrderService
     {
-        private readonly AppDbContext _context;
+        private readonly IOrderRepository _orderRepository;
         private readonly IDateService _dateService;
+        private readonly IMapper _mapper;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public OrderService(AppDbContext context, IDateService dateService)
+        public OrderService(IOrderRepository orderRepository, IDateService dateService, IMapper mapper, IUnitOfWork unitOfWork)
         {
-            _context = context;
+            _orderRepository = orderRepository;
             _dateService = dateService;
+            _mapper = mapper;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task CreateOrder(CreateOrderRequest orderDto)
         {
-            var order = new Order
-            {
-                CustomerName = orderDto.CustomerName,
-                Phone = orderDto.Phone,
-                OrderDate = orderDto.OrderDate,
-                Note = orderDto.Note,
-                Items = orderDto.Items.Select(itemDto => new OrderItem
-                {
-                    BreadId = itemDto.BreadId,
-                    Quantity = itemDto.Quantity
-                }).ToList()
-            };
-
-            await _context.Orders.AddAsync(order);
-            await _context.SaveChangesAsync();
+            var order = _mapper.Map<Order>(orderDto);
+            await _orderRepository.AddAsync(order);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task<List<OrderResponse>> GetOrders(DateOnly date)
         {
-                var orderEntities = await _context.Orders
-                    .Include(o => o.Items)
-                    .ThenInclude(i => i.Bread)
-                    .AsNoTracking()
-                    .Where(o => o.OrderDate == date)
-                    .OrderByDescending(o => o.CreatedAt)
-                    .ToListAsync();
-
-                orderEntities.ForEach(o =>
-                {
-                    o.CreatedAt = DateTime.SpecifyKind(o.CreatedAt, DateTimeKind.Utc);
-                });
-
-                var orders = orderEntities.Select(o => new OrderResponse
-                {
-                    OrderId = o.OrderId,
-                    CustomerName = o.CustomerName,
-                    Note = o.Note,
-                    Phone = o.Phone,
-                    CreatedAt = o.CreatedAt,
-                    OrderDate = o.OrderDate,
-                    Items = o.Items.Select(i => new OrderItemDto
-                    {
-                        BreadId = i.BreadId,
-                        Quantity = i.Quantity
-                    }).ToList()
-                }).ToList();
-            
-            return orders;
+            var orderEntities = await _orderRepository.GetByDateAsync(date);
+            return _mapper.Map<List<OrderResponse>>(orderEntities);
         }
 
         public async Task<List<OrderResponse>> GetOrders()
@@ -84,83 +49,45 @@ namespace MojePszczoly.Services
         private async Task<List<OrderResponse>> GetOrdersInternal(bool isCurrent)
         {
             var currentWeekMonday = _dateService.GetCurrentWeekMonday();
+            var orderEntities = isCurrent
+                ? await _orderRepository.GetCurrentAsync(currentWeekMonday)
+                : await _orderRepository.GetPastAsync(currentWeekMonday);
 
-            var query =  _context.Orders
-            .Include(o => o.Items)
-            .ThenInclude(i => i.Bread)
-            .AsNoTracking();
-
-            query = isCurrent
-                ? query.Where(o => o.OrderDate >= currentWeekMonday)
-                : query.Where(o => o.OrderDate < currentWeekMonday);
-
-            var orderEntities = await query
-            .OrderByDescending(o => o.CreatedAt)
-            .ToListAsync();
-
-            orderEntities.ForEach(o =>
-            {
-                o.CreatedAt = DateTime.SpecifyKind(o.CreatedAt, DateTimeKind.Utc);
-            });
-
-            var orders = orderEntities.Select(o => new OrderResponse
-            {
-                OrderId = o.OrderId,
-                CustomerName = o.CustomerName,
-                Note = o.Note,
-                Phone = o.Phone,
-                CreatedAt = o.CreatedAt,
-                OrderDate = o.OrderDate,
-                Items = o.Items.Select(i => new OrderItemDto
-                {
-                    BreadId = i.BreadId,
-                    Quantity = i.Quantity
-                }).ToList()
-            }).ToList();
-
-            return orders;
+            return _mapper.Map<List<OrderResponse>>(orderEntities);
         }
 
         public async Task<bool> DeleteOrder(int id)
         {
-            var order = await _context.Orders
-                .Include(o => o.Items)
-                .FirstOrDefaultAsync(o => o.OrderId == id);
+            var order = await _orderRepository.GetByIdWithItemsAsync(id);
 
             if (order == null)
                 return false;
 
-            _context.Orders.Remove(order);
-            await _context.SaveChangesAsync();
+            await _orderRepository.DeleteAsync(order);
+            await _unitOfWork.SaveChangesAsync();
          
             return true;
         }
 
         public async Task<bool> UpdateOrder(int id, UpdateOrderRequest updatedOrder)
         {
-            var existingOrder = await _context.Orders
-                .Include(o => o.Items)
-                .FirstOrDefaultAsync(o => o.OrderId == id);
+            var existingOrder = await _orderRepository.GetByIdWithItemsAsync(id);
 
             if (existingOrder == null)
                 return false;
 
-            existingOrder.CustomerName = updatedOrder.CustomerName;
-            existingOrder.Phone = updatedOrder.Phone;
-            existingOrder.OrderDate = updatedOrder.OrderDate;
-            existingOrder.Note = updatedOrder.Note;
-
-            _context.OrderItems.RemoveRange(existingOrder.Items);
-
-            existingOrder.Items = updatedOrder.Items
+            _mapper.Map(updatedOrder, existingOrder);
+            var updatedItems = updatedOrder.Items
                 .Select(item => new OrderItem
                 {
                     BreadId = item.BreadId,
                     Quantity = item.Quantity,
                     OrderId = id
-                }).ToList();
+                })
+                .ToList();
 
-            await _context.SaveChangesAsync();
+            await _orderRepository.ReplaceItemsAsync(existingOrder, updatedItems);
+            await _unitOfWork.SaveChangesAsync();
           
             return true;
         }

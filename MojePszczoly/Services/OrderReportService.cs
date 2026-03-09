@@ -3,9 +3,9 @@ using Microsoft.Extensions.Caching.Memory;
 using MojePszczoly.Contracts.Dtos;
 using MojePszczoly.Contracts.Requests;
 using MojePszczoly.Contracts.Responses;
-using MojePszczoly.Infrastructure;
 using MojePszczoly.Infrastructure.Entities;
 using MojePszczoly.Interfaces;
+using MojePszczoly.Interfaces.Repositories;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 using System.Globalization;
@@ -14,27 +14,23 @@ namespace MojePszczoly.Services
 {
     public class OrderReportService : IOrderReportService
     {
-        private readonly AppDbContext _context;
+        private readonly IOrderRepository _orderRepository;
+        private readonly IBreadRepository _breadRepository;
 
-        public OrderReportService(AppDbContext context)
+        public OrderReportService(IOrderRepository orderRepository, IBreadRepository breadRepository)
         {
-            _context = context;
+            _orderRepository = orderRepository;
+            _breadRepository = breadRepository;
         }
 
         public async Task<MemoryStream?> GetOrdersReportExcel(DateOnly date)
         {
-            var orders = await _context.Orders
-                .Include(o => o.Items)
-                .ThenInclude(i => i.Bread)
-                .Where(o => o.OrderDate == date)
-                .ToListAsync();
+            var orders = await _orderRepository.GetByDateAsync(date);
 
             if (!orders.Any())
                 return null;
 
-            var allBreads = await _context.Breads
-                .OrderBy(b => b.SortOrder)
-                .ToListAsync();
+            var allBreads = await _breadRepository.GetOrderedAsync();
 
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
             using var package = new ExcelPackage();
