@@ -18,7 +18,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MojePszczoly\MojePszczoly.csproj" />
+    <ProjectReference Include="..\MojePszczoly.Application\MojePszczoly.Application.csproj" />
+    <ProjectReference Include="..\MojePszczoly.Contracts\MojePszczoly.Contracts.csproj" />
+    <ProjectReference Include="..\MojePszczoly.Domain\MojePszczoly.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>

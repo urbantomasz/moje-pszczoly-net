@@ -1,10 +1,10 @@
 using AutoMapper;
 using MojePszczoly.Contracts.Dtos;
 using MojePszczoly.Contracts.Requests;
-using MojePszczoly.Infrastructure.Entities;
-using MojePszczoly.Interfaces;
-using MojePszczoly.Interfaces.Repositories;
-using MojePszczoly.Services;
+using MojePszczoly.Domain.Entities;
+using MojePszczoly.Application.Interfaces;
+using MojePszczoly.Application.Interfaces.Repositories;
+using MojePszczoly.Application.Services;
 using Moq;
 
 namespace MojePszczoly.Tests.Services

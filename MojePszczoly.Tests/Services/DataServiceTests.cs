@@ -1,6 +1,6 @@
-﻿using MojePszczoly.Infrastructure.Entities;
-using MojePszczoly.Interfaces; 
-using MojePszczoly.Services;
+﻿using MojePszczoly.Domain.Entities;
+using MojePszczoly.Application.Interfaces; 
+using MojePszczoly.Application.Services;
 using Moq;
 
 namespace MojePszczoly.Tests.Services
