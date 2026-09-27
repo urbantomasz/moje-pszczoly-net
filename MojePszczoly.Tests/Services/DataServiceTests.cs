@@ -20,12 +20,12 @@ namespace MojePszczoly.Tests.Services
         }
 
         [Fact]
-        public void GetUpcomingDates_ReturnsThreeUpcomingDates()
+        public void GetGeneratedDates_ReturnsThreeUpcomingDates()
         {
             // Arrange - Already set up in the constructor
 
             // Act
-            var result = _dateService.GetUpcomingDates();
+            var result = _dateService.GetGeneratedDates();
 
             // Assert
             Assert.Equal(3, result.Count);
@@ -34,10 +34,10 @@ namespace MojePszczoly.Tests.Services
         }
 
         [Fact]
-        public void GetUpcomingDates_DatesAreInUtc()
+        public void GetGeneratedDates_DatesAreInUtc()
         {
             // Act
-            var result = _dateService.GetUpcomingDates();
+            var result = _dateService.GetGeneratedDates();
 
             // Assert
             foreach (var date in result)
@@ -47,10 +47,10 @@ namespace MojePszczoly.Tests.Services
         }
 
         [Fact]
-        public void GetUpcomingDates_DatesHaveCorrectTime()
+        public void GetGeneratedDates_DatesHaveCorrectTime()
         {
             // Act
-            var result = _dateService.GetUpcomingDates();
+            var result = _dateService.GetGeneratedDates();
 
             // Assert
             foreach (var date in result)
@@ -62,10 +62,10 @@ namespace MojePszczoly.Tests.Services
         }
 
         [Fact]
-        public void GetUpcomingDates_DatesIncludeSpecifiedDaysOfWeek()
+        public void GetGeneratedDates_DatesIncludeSpecifiedDaysOfWeek()
         {
             // Act
-            var result = _dateService.GetUpcomingDates();
+            var result = _dateService.GetGeneratedDates();
 
             Assert.Contains(result, date => date.DayOfWeek == DayOfWeek.Tuesday);
             Assert.Contains(result, date => date.DayOfWeek == DayOfWeek.Wednesday);

@@ -14,6 +14,9 @@ namespace MojePszczoly.Services
 {
     public class OrderService : IOrderService
     {
+        private const string CurrentOrdersCacheKey = "orders:current";
+        private const string PastOrdersCacheKey = "orders:past";
+
         private readonly AppDbContext _context;
         private readonly IDateService _dateService;
         private readonly IMemoryCache _cache;
@@ -46,7 +49,7 @@ namespace MojePszczoly.Services
 
             _context.Orders.Add(order);
             _context.SaveChanges();
-            _cache.Remove("orders");
+            InvalidateOrdersCache();
         }
 
         public async Task<List<OrderDto>> GetOrders(DateTime date)
@@ -85,10 +88,10 @@ namespace MojePszczoly.Services
 
         public async Task<List<OrderDto>> GetOrders()
         {
-            if (!_cache.TryGetValue("orders:current", out List<OrderDto> orders))
+            if (!_cache.TryGetValue(CurrentOrdersCacheKey, out List<OrderDto> orders))
             {
                 orders = await GetOrdersInternal(isCurrent: true);
-                _cache.Set("orders:current", orders, new MemoryCacheEntryOptions()
+                _cache.Set(CurrentOrdersCacheKey, orders, new MemoryCacheEntryOptions()
                     .SetSlidingExpiration(TimeSpan.FromMinutes(5)));
             }
             return orders;
@@ -96,13 +99,23 @@ namespace MojePszczoly.Services
 
         public async Task<List<OrderDto>> GetPastOrders()
         {
-            if (!_cache.TryGetValue("orders:past", out List<OrderDto> orders))
+            if (!_cache.TryGetValue(PastOrdersCacheKey, out List<OrderDto> orders))
             {
                 orders = await GetOrdersInternal(isCurrent: false);
-                _cache.Set("orders:past", orders, new MemoryCacheEntryOptions()
+                _cache.Set(PastOrdersCacheKey, orders, new MemoryCacheEntryOptions()
                     .SetSlidingExpiration(TimeSpan.FromMinutes(5)));
             }
             return orders;
+        }
+
+        /// <summary>
+        /// Czyści oba klucze listy zamówień. Wcześniej usuwano tu klucz "orders",
+        /// który nigdy nie był zapisywany, więc cache nie unieważniał się nigdy.
+        /// </summary>
+        private void InvalidateOrdersCache()
+        {
+            _cache.Remove(CurrentOrdersCacheKey);
+            _cache.Remove(PastOrdersCacheKey);
         }
 
         private async Task<List<OrderDto>> GetOrdersInternal(bool isCurrent)
@@ -157,7 +170,7 @@ namespace MojePszczoly.Services
 
             _context.Orders.Remove(order);
             await _context.SaveChangesAsync();
-            _cache.Remove("orders");
+            InvalidateOrdersCache();
             return true;
         }
 
@@ -186,7 +199,7 @@ namespace MojePszczoly.Services
                 }).ToList();
 
             await _context.SaveChangesAsync();
-            _cache.Remove("orders");
+            InvalidateOrdersCache();
             return true;
         }
 

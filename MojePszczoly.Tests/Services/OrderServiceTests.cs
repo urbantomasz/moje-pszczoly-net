@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using MojePszczoly.Data;
 using MojePszczoly.Data.Models;
@@ -41,6 +41,8 @@ public class OrderServiceTests
 
         var mockSet = new Mock<DbSet<Order>>();
         _mockContext.Setup(m => m.Orders).Returns(mockSet.Object);
+        _mockDateService.Setup(d => d.GetUpcomingDates())
+            .Returns(new List<DateTime> { orderDto.OrderDate.Date });
 
         // Act
         _orderService.CreateOrder(orderDto);
@@ -83,4 +85,60 @@ public class OrderServiceTests
         _mockContext.Verify(m => m.SaveChangesAsync(default), Times.Once());
     }
 
+
+    [Fact]
+    public void CreateOrder_RejectsDateOutsideAllowedSet()
+    {
+        // Arrange - klient podsyla termin, ktorego nie ma juz na liscie
+        var orderDto = new CreateOrderDto
+        {
+            CustomerName = "John Doe",
+            Phone = 123456789,
+            OrderDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            Items = new List<CreateOrderItemDto>
+            {
+                new CreateOrderItemDto { BreadId = 1, Quantity = 1 }
+            }
+        };
+
+        var mockSet = new Mock<DbSet<Order>>();
+        _mockContext.Setup(m => m.Orders).Returns(mockSet.Object);
+        _mockDateService.Setup(d => d.GetUpcomingDates())
+            .Returns(new List<DateTime> { new DateTime(2026, 6, 15, 0, 0, 0, DateTimeKind.Utc) });
+
+        // Act + Assert
+        Assert.Throws<ArgumentException>(() => _orderService.CreateOrder(orderDto));
+        mockSet.Verify(m => m.Add(It.IsAny<Order>()), Times.Never());
+        _mockContext.Verify(m => m.SaveChanges(), Times.Never());
+    }
+
+    [Fact]
+    public void CreateOrder_InvalidatesBothOrderCacheKeys()
+    {
+        // Arrange
+        var orderDto = new CreateOrderDto
+        {
+            CustomerName = "John Doe",
+            Phone = 123456789,
+            OrderDate = DateTime.UtcNow,
+            Items = new List<CreateOrderItemDto>
+            {
+                new CreateOrderItemDto { BreadId = 1, Quantity = 1 }
+            }
+        };
+
+        var mockSet = new Mock<DbSet<Order>>();
+        _mockContext.Setup(m => m.Orders).Returns(mockSet.Object);
+        _mockDateService.Setup(d => d.GetUpcomingDates())
+            .Returns(new List<DateTime> { orderDto.OrderDate.Date });
+
+        // Act
+        _orderService.CreateOrder(orderDto);
+
+        // Assert - regresja: wczesniej usuwano nieistniejacy klucz "orders",
+        // wiec lista zamowien nie odswiezala sie po zmianie
+        _mockMemoryCache.Verify(c => c.Remove("orders:current"), Times.Once());
+        _mockMemoryCache.Verify(c => c.Remove("orders:past"), Times.Once());
+        _mockMemoryCache.Verify(c => c.Remove("orders"), Times.Never());
+    }
 }
