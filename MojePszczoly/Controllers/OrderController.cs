@@ -24,7 +24,15 @@ namespace MojePszczoly.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            _orderService.CreateOrder(orderDto);
+            try
+            {
+                _orderService.CreateOrder(orderDto);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+
             return Ok(new { message = "Order created successfully!" });
         }
 

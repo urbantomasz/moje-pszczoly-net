@@ -27,6 +27,10 @@ namespace MojePszczoly.Services
 
         public void CreateOrder(CreateOrderDto orderDto)
         {
+            var allowedDates = _dateService.GetUpcomingDates();
+            if (!allowedDates.Any(d => d.Date == orderDto.OrderDate.Date))
+                throw new ArgumentException("Wybrany dzien dostawy nie jest juz dostepny.");
+
             var order = new Order
             {
                 CustomerName = orderDto.CustomerName,

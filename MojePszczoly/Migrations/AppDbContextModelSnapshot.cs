@@ -50,6 +50,29 @@ namespace MojePszczoly.Migrations
                     b.ToTable("Breads");
                 });
 
+            modelBuilder.Entity("MojePszczoly.Data.Models.CustomOrderDate", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("DateUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DateUtc")
+                        .IsUnique();
+
+                    b.ToTable("CustomOrderDates");
+                });
+
             modelBuilder.Entity("MojePszczoly.Data.Models.Order", b =>
                 {
                     b.Property<int>("OrderId")
@@ -87,6 +110,48 @@ namespace MojePszczoly.Migrations
                     b.HasKey("OrderId");
 
                     b.ToTable("Orders");
+                });
+
+            modelBuilder.Entity("MojePszczoly.Data.Models.OrderFormSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("NoticeEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("NoticeMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("NoticeTitle")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<bool>("UseCustomDates")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.HasKey("Id");
+
+                    b.ToTable("OrderFormSettings");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            NoticeEnabled = false,
+                            UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            UseCustomDates = false
+                        });
                 });
 
             modelBuilder.Entity("MojePszczoly.Data.Models.OrderItem", b =>

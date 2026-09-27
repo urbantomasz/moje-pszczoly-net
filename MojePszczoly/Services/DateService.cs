@@ -1,5 +1,6 @@
-﻿using MojePszczoly.Data;
+using MojePszczoly.Data;
 using MojePszczoly.Interfaces;
+using MojePszczoly.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,35 +15,59 @@ namespace MojePszczoly.Services
             _context = dbContext;
         }
 
-        // public List<DateTime> GetUpcomingDates()
-        // {
-        //    TimeZoneInfo polandTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
-        //    var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, polandTimeZone);
+        /// <summary>
+        /// Daty widoczne w formularzu zamowienia. Jesli w panelu wlaczono wlasne daty
+        /// i sa jakies nadchodzace - one wygrywaja. W przeciwnym razie wracamy do
+        /// wyliczanych wtorku/srody/czwartku.
+        /// </summary>
+        public List<OrderDateDto> GetUpcomingOrderDates()
+        {
+            var settings = _context.OrderFormSettings.FirstOrDefault(s => s.Id == 1);
 
-        //    var nextTuesday = GetNextWeekday(today, DayOfWeek.Tuesday);
-        //    var nextWednesday = GetNextWeekday(today, DayOfWeek.Wednesday);
-        //    var nextThursday = GetNextWeekday(today, DayOfWeek.Thursday);
+            if (settings is { UseCustomDates: true })
+            {
+                var today = GetPolandTodayAsUtc();
 
-        //    return new List<DateTime> { nextTuesday, nextWednesday, nextThursday }
-        //        .Select(d => new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc))
-        //        .OrderBy(d => d)
-        //        .ToList();
-        // }
+                var customDates = _context.CustomOrderDates
+                    .Where(d => d.DateUtc >= today)
+                    .OrderBy(d => d.DateUtc)
+                    .Select(d => new { d.DateUtc, d.Note })
+                    .AsEnumerable()
+                    .Select(d => new OrderDateDto(DateTime.SpecifyKind(d.DateUtc, DateTimeKind.Utc), d.Note))
+                    .ToList();
+
+                if (customDates.Count > 0)
+                    return customDates;
+            }
+
+            return GetGeneratedDates()
+                .Select(d => new OrderDateDto(d, null))
+                .ToList();
+        }
 
         public List<DateTime> GetUpcomingDates()
         {
-            int currentYear = DateTime.UtcNow.Year;
-            var date1 = new DateTime(currentYear, 9, 22, 0, 0, 0, DateTimeKind.Utc);
-            var date2 = new DateTime(currentYear, 9, 23, 0, 0, 0, DateTimeKind.Utc);
-            var date3 = new DateTime(currentYear, 9, 27, 0, 0, 0, DateTimeKind.Utc);
+            return GetUpcomingOrderDates().Select(d => d.Date).ToList();
+        }
 
-            return new List<DateTime> { date1, date2, date3 };
+        /// <summary>Normalny rytm tygodnia, bez ogladania sie na konfiguracje.</summary>
+        public List<DateTime> GetGeneratedDates()
+        {
+            var today = GetPolandNow();
+
+            var nextTuesday = GetNextWeekday(today, DayOfWeek.Tuesday);
+            var nextWednesday = GetNextWeekday(today, DayOfWeek.Wednesday);
+            var nextThursday = GetNextWeekday(today, DayOfWeek.Thursday);
+
+            return new List<DateTime> { nextTuesday, nextWednesday, nextThursday }
+                .Select(d => new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, DateTimeKind.Utc))
+                .OrderBy(d => d)
+                .ToList();
         }
 
         public List<DateTime> GetCurrentWeekDates()
         {
-            TimeZoneInfo polandTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
-            var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, polandTimeZone);
+            var today = GetPolandNow();
 
             int diffToMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
             var monday = today.Date.AddDays(-diffToMonday);
@@ -75,13 +100,25 @@ namespace MojePszczoly.Services
 
         public DateTime GetCurrentWeekMonday()
         {
-            TimeZoneInfo polandTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
-            var today = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, polandTimeZone);
+            var today = GetPolandNow();
 
             int diffToMonday = ((int)today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
             var monday = today.Date.AddDays(-diffToMonday);
 
             return new DateTime(monday.Year, monday.Month, monday.Day, 0, 0, 0, DateTimeKind.Utc);
+        }
+
+        private static DateTime GetPolandNow()
+        {
+            TimeZoneInfo polandTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, polandTimeZone);
+        }
+
+        /// <summary>Dzisiejsza data w Polsce, sprowadzona do polnocy UTC - tak jak trzymamy daty dostaw.</summary>
+        private static DateTime GetPolandTodayAsUtc()
+        {
+            var today = GetPolandNow();
+            return new DateTime(today.Year, today.Month, today.Day, 0, 0, 0, DateTimeKind.Utc);
         }
     }
 

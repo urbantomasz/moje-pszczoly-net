@@ -33,6 +33,7 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IDateService, DateService>();
 builder.Services.AddScoped<IBreadService, BreadService>();
+builder.Services.AddScoped<IOrderConfigService, OrderConfigService>();
 
 builder.Services.AddControllers();
 builder.Services.AddDbContext<AppDbContext>(options =>
